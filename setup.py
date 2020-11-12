@@ -1,16 +1,24 @@
 #from numpy.core.multiarray import packbits
-from joebvp import atomicdata
+# from joebvp import atomicdata
 from setuptools import setup, find_packages
 import glob
 from pkg_resources import resource_filename
+import os
+import pathlib
 
-data_files = []
-root_path = resource_filename('joebvp', 'atomicdata/')
-directories = glob.glob(root_path)
-for directory in directories:
-    files = glob.glob(directory + '*[!_.py]')
-    data_files.append((directory, files))
-# then pass data_files to setup()
+
+def package_files(directory):
+    directory = str(pathlib.Path(__file__).parent.absolute()) + str(
+        pathlib.Path(directory))
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            if '__' not in filename:
+                paths.append(os.path.join('..', path, filename))
+    return paths
+
+
+data_files = package_files('/joebvp/atomicdata/')
 
 setup(name='joebvp',
       version='0.5',
