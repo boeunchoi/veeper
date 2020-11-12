@@ -13,7 +13,7 @@ for directory in directories:
 # then pass data_files to setup()
 
 setup(name='joebvp',
-      version='0.4',
+      version='0.5',
       description=
       'Software for efficiently fitting Voigt profiles to UV spectra.',
       url='http://github.com/jnburchett/joebvp',
