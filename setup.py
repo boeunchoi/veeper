@@ -8,7 +8,7 @@ data_files = []
 root_path = resource_filename('joebvp', 'atomicdata/')
 directories = glob.glob(root_path)
 for directory in directories:
-    files = glob.glob(directory + '*')
+    files = glob.glob(directory + '*[!_.py]')
     data_files.append((directory, files))
 # then pass data_files to setup()
 
