@@ -21,7 +21,7 @@ def package_files(directory):
 data_files = package_files('/joebvp/atomicdata/')
 
 setup(name='joebvp',
-      version='0.5',
+      version='0.5.1',
       description=
       'Software for efficiently fitting Voigt profiles to UV spectra.',
       url='http://github.com/jnburchett/joebvp',
