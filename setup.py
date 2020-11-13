@@ -19,6 +19,8 @@ def package_files(directory):
 
 
 data_files = package_files('/joebvp/atomicdata/')
+data_files.extend(package_files('/joebvp/'))
+data_files.extend(package_files('/joebvp/LSF/'))
 
 setup(name='joebvp',
       version='0.5.1',
