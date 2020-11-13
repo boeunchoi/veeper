@@ -23,7 +23,7 @@ data_files.extend(package_files('/joebvp/'))
 data_files.extend(package_files('/joebvp/LSF/'))
 
 setup(name='joebvp',
-      version='0.5.1',
+      version='0.5.2',
       description=
       'Software for efficiently fitting Voigt profiles to UV spectra.',
       url='http://github.com/jnburchett/joebvp',
