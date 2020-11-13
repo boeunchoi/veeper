@@ -20,14 +20,15 @@ def package_files(directory):
 
 data_files = package_files('/joebvp/atomicdata/')
 
-setup(name='joebvp',
-      version='0.5',
-      description=
-      'Software for efficiently fitting Voigt profiles to UV spectra.',
-      url='http://github.com/jnburchett/joebvp',
-      author='Joseph N. Burchett',
-      author_email='jburchet@astro.umass.edu',
-      package_data={'joebvp': data_files},
-      data_files=data_files,
-      packages=find_packages())
+setup(
+    name='joebvp',
+    version='0.5',
+    description=
+    'Software for efficiently fitting Voigt profiles to UV spectra.',
+    url='http://github.com/jnburchett/joebvp',
+    author='Joseph N. Burchett',
+    author_email='jburchet@astro.umass.edu',
+    package_data={'joebvp': data_files},
+    #data_files=data_files,
+    packages=find_packages())
 # packages=['joebvp', 'joebvp.atomicdata', 'joebvp.LSF'])
