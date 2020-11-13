@@ -27,6 +27,6 @@ setup(name='joebvp',
       url='http://github.com/jnburchett/joebvp',
       author='Joseph N. Burchett',
       author_email='jburchet@astro.umass.edu',
-      data_files=data_files,
+      data_files=[data_files, '/joebvp/atomicdata/verner6.txt'],
       packages=find_packages())
 # packages=['joebvp', 'joebvp.atomicdata', 'joebvp.LSF'])
