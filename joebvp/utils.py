@@ -19,6 +19,7 @@ except:
     print("joebvp.utils: No local joebvp_cfg.py found, using default cfg.py file from joebvp.")
     import joebvp.cfg as cfg
 import astropy.units as u
+import astropy.constants as astc
 
 def compose_model(spec,filelist,outfile):
     '''
@@ -540,7 +541,7 @@ def abscomponents_from_abslines(abslinelist, **kwargs):
         comps.append(thiscomp)
     return comps
 
-def pyigm_to_veeper(json, fits):
+def pyigm_to_veeper(json, fits, dv_expand=25*u.km/u.s):
 
     '''
     Converts from a werksquad igmguesses .json file to veeper-fitted components.
@@ -554,6 +555,11 @@ def pyigm_to_veeper(json, fits):
     fits : str
         QSO spectrum fits file.
 
+    dv_expand : Quantity scalar with velocity units, optional
+        Velocity to pad wavelength limits by when looking for blends.
+        This is dv in one direction, so the full extent of the padding region
+        will be twice dv_expand.
+
     A function to call the various methods needed to go from the werksquad .json file
     to a set of inputs that the veeper can understand. NOTE: This process makes
     a ton of files - so a subdirectory is made to cut down on the clutter in the working directory.
@@ -562,8 +568,26 @@ def pyigm_to_veeper(json, fits):
 
     # Separates out the giant werksquad .json file into a list of absorption components.
     comp = igmguesses.from_igmguesses_to_complist(json)
+
+    #dilate zlims of each absline
+    dz_p_1 = 1 + (dv_expand/astc.c).to('').value
+    mdz_p_1 = 1 - (dv_expand/astc.c).to('').value
+    dilate = lambda z, dzp1: (1+z)*dzp1 - 1
+    for abs_comp in comp:
+        for abs_line in abs_comp._abslines:
+            abs_line.limits.set([dilate(abs_line.limits.zlim[0], mdz_p_1),
+                                 dilate(abs_line.limits.zlim[1], dz_p_1)])
+
     # Groups absorption components so that veeper doesn't try to fit every component at the same time.
     coincident = utils.group_coincident_components(comp)
+
+    #shrink zlims of each absline back to what they were
+    shrink = lambda z, dzp1: (1+z)/dzp1 - 1
+    for sub_comp in coincident:
+        for abs_comp in sub_comp:
+            for abs_line in abs_comp._abslines:
+                abs_line.limits.set([shrink(abs_line.limits.zlim[0], mdz_p_1),
+                                     shrink(abs_line.limits.zlim[1], dz_p_1)])
 
     # to reduce clutter:
     path = os.path.join('.','component_groups')
