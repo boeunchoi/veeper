@@ -7,7 +7,7 @@ from joebvp import atomicdata
 from linetools.spectra.io import readspec
 from linetools.spectra.xspectrum1d import XSpectrum1D
 from linetools.lists.linelist import LineList
-from astropy.table import Table,vstack
+from astropy.table import Table, vstack
 from astropy.io import ascii
 from pyigm.guis import igmguesses
 from linetools.isgm import io, utils
@@ -16,11 +16,14 @@ import os
 try:
     import joebvp_cfg
 except:
-    print("joebvp.utils: No local joebvp_cfg.py found, using default cfg.py file from joebvp.")
+    print(
+        "joebvp.utils: No local joebvp_cfg.py found, using default cfg.py file from joebvp."
+    )
     import joebvp.cfg as cfg
 import astropy.units as u
 
-def compose_model(spec,filelist,outfile):
+
+def compose_model(spec, filelist, outfile):
     '''
     Generates full-model spectrum (XSpectrum1D) from a set of joebvp output files and writes out a file with the spectrum.
 
@@ -41,30 +44,40 @@ def compose_model(spec,filelist,outfile):
     from joebvp import stevebvpfit
 
     ### Deal with alternate input types
-    if isinstance(spec,str):
+    if isinstance(spec, str):
         specobj = readspec(spec)
     else:
         specobj = spec
 
     ### Load essentials from spectrum
     wave = specobj.wavelength.value
-    normsig=specobj.sig.value/specobj.co.value
+    normsig = specobj.sig.value / specobj.co.value
     cfg.wave = wave
 
     ### Concatenate all the parameter tables
-    concatenate_line_tables(filelist,outtablefile='compiledVPinputs.dat')
+    concatenate_line_tables(filelist, outtablefile='compiledVPinputs.dat')
 
     ### Make the model!
-    fitpars, fiterrors, parinfo, linecmts = stevebvpfit.readpars('compiledVPinputs.dat')  # read this back in to load params
-    cfg.fitidx = stevebvpfit.fitpix(wave, fitpars)  # set the pixels in the line regions
-    model = stevebvpfit.voigtfunc(wave,fitpars)  # generate the Voigt profiles of all lines
+    fitpars, fiterrors, parinfo, linecmts = stevebvpfit.readpars(
+        'compiledVPinputs.dat')  # read this back in to load params
+    cfg.fitidx = stevebvpfit.fitpix(
+        wave, fitpars)  # set the pixels in the line regions
+    model = stevebvpfit.voigtfunc(
+        wave, fitpars)  # generate the Voigt profiles of all lines
 
     ### Instantiate XSpectrum1D object and write it out
-    outspec=XSpectrum1D.from_tuple((wave,model,normsig))
+    outspec = XSpectrum1D.from_tuple((wave, model, normsig))
     outspec.write_to_fits(outfile)
 
-def model_profile(spec,fitpars,instr=None,gratings=None,lsfranges=None,
-                  cen_wave=None,lps=None,slits=None):
+
+def model_profile(spec,
+                  fitpars,
+                  instr=None,
+                  gratings=None,
+                  lsfranges=None,
+                  cen_wave=None,
+                  lps=None,
+                  slits=None):
     '''Produce Voigt profile model from parameters and instrumental setup for
     convolving proper line spread function.  Note
 
@@ -106,7 +119,7 @@ def model_profile(spec,fitpars,instr=None,gratings=None,lsfranges=None,
         cfg.slits = slits
 
     ### Deal with alternate input types
-    if isinstance(spec,str):
+    if isinstance(spec, str):
         specobj = readspec(spec)
     else:
         specobj = spec
@@ -115,13 +128,11 @@ def model_profile(spec,fitpars,instr=None,gratings=None,lsfranges=None,
     #import pdb; pdb.set_trace()
     cfg.wave = specobj.wavelength.value
     cfg.spectrum = specobj
-    profile = makevoigt.cosvoigt(cfg.wave, fitpars )
-    return specobj.wavelength,profile
+    profile = makevoigt.cosvoigt(cfg.wave, fitpars)
+    return specobj.wavelength, profile
 
 
-
-
-def concatenate_line_tables(filelist,outtablefile='compiledVPoutputs.dat'):
+def concatenate_line_tables(filelist, outtablefile='compiledVPoutputs.dat'):
     '''
     Compiles the output from several fitting runs into a single table
 
@@ -142,24 +153,28 @@ def concatenate_line_tables(filelist,outtablefile='compiledVPoutputs.dat'):
         lstarr = np.genfromtxt(filelist, dtype=None)
         listofiles = lstarr.tolist()
     elif isinstance(filelist, str):
-        lstarr=np.genfromtxt(filelist,dtype=None,encoding=None)
-        listofiles=lstarr.tolist()
+        lstarr = np.genfromtxt(filelist, dtype=None, encoding=None)
+        listofiles = lstarr.tolist()
     else:
-        listofiles=filelist
+        listofiles = filelist
     if sum(1 for line in open(filelist)) == 1:
         listofiles = [listofiles]
     tabs = []
     for i, ff in enumerate(listofiles):
-        if isinstance(ff,bytes):
+        if isinstance(ff, bytes):
             ff = ff.decode()
         #import pdb; pdb.set_trace()
         smallpartable = ascii.read(ff)
         smallpartable['groupfilename'] = ff
-        tabs.append(smallpartable) # <-- put it here
+        tabs.append(smallpartable)  # <-- put it here
     bigpartable = vstack(tabs)
-    ascii.write(bigpartable, output=outtablefile, delimiter='|',overwrite=True)  # write out compiled table
+    ascii.write(bigpartable,
+                output=outtablefile,
+                delimiter='|',
+                overwrite=True)  # write out compiled table
 
-def abslines_from_fitpars(fitpars,ra=None,dec=None,linelist=None):
+
+def abslines_from_fitpars(fitpars, ra=None, dec=None, linelist=None):
     '''
     Takes a joebvp parameter array and builds a list of linetools AbsLines from the measurements
 
@@ -184,25 +199,26 @@ def abslines_from_fitpars(fitpars,ra=None,dec=None,linelist=None):
     else:
         llist = linelist
 
-    abslinelist = [] # Initiate list to populate
-    for i,rw in enumerate(fitpars[0]):
+    abslinelist = []  # Initiate list to populate
+    for i, rw in enumerate(fitpars[0]):
         vcent = fitpars[4][i]
         v1 = vcent + fitpars[5][i]
         v2 = vcent + fitpars[6][i]
 
-        line=AbsLine(fitpars[0][i]*u.AA, z=fitpars[3][i],linelist=llist)
-        vlims=[v1,v2]*u.km/u.s
+        line = AbsLine(fitpars[0][i] * u.AA, z=fitpars[3][i], linelist=llist)
+        vlims = [v1, v2] * u.km / u.s
         line.limits.set(vlims)
         ### Set other parameters
         line.attrib['logN'] = fitpars[1][i]
         #line.attrib['sig_N'] = colerr
         line.attrib['b'] = fitpars[2][i]
         #line.attrib['sig_b'] = berr
-        line.analy['spec']=cfg.spectrum
+        line.analy['spec'] = cfg.spectrum
         line.attrib['flag_N'] = 1
         ### Add it to the list and go on
         abslinelist.append(line)
     return abslinelist
+
 
 def fitpars_from_abslines(abslinelist):
     '''Builds veeper parameter array from list of linetools AbsLines
@@ -226,13 +242,20 @@ def fitpars_from_abslines(abslinelist):
     linevlim2 = [al.limits.vlim[1].value for al in abslinelist]
     zs = [al.z for al in abslinelist]
     initpars = [restwaves, linecol, lineb, zs, linevel, linevlim1, linevlim2]
-    initinfo = [[1]*len(abslinelist)]*len(initpars)
-    fitpars, parinfo = stevebvpfit.initlinepars(zs, restwaves, initpars,
-                                              initinfo=initinfo)
+    initinfo = [[1] * len(abslinelist)] * len(initpars)
+    fitpars, parinfo = stevebvpfit.initlinepars(zs,
+                                                restwaves,
+                                                initpars,
+                                                initinfo=initinfo)
 
     return fitpars
 
-def abslines_from_VPfile(parfile,specfile=None,ra=None,dec=None,linelist=None):
+
+def abslines_from_VPfile(parfile,
+                         specfile=None,
+                         ra=None,
+                         dec=None,
+                         linelist=None):
     '''
     Takes a joebvp parameter file and builds a list of linetools AbsLines from the measurements therein.
 
@@ -257,46 +280,50 @@ def abslines_from_VPfile(parfile,specfile=None,ra=None,dec=None,linelist=None):
         llist = LineList('ISM')
     else:
         llist = linelist
-    if specfile!=None:
-        spec=readspec(specfile) # Allow spectrum file to be declared in call
-    linetab = ascii.read(parfile) # Read parameters from file
-    linetab['restwave']=linetab['restwave']*u.AA
-    abslinelist = [] # Initiate list to populate
-    for i,row in enumerate(linetab):
+    if specfile != None:
+        spec = readspec(specfile)  # Allow spectrum file to be declared in call
+    linetab = ascii.read(parfile)  # Read parameters from file
+    linetab['restwave'] = linetab['restwave'] * u.AA
+    abslinelist = []  # Initiate list to populate
+    for i, row in enumerate(linetab):
         ### Check to see if errors for this line are defined
-        colerr,berr,velerr=get_errors(linetab,i)
+        colerr, berr, velerr = get_errors(linetab, i)
         ### Adjust velocity limits according to centroid errors and limits from file
-        vcentmin = row['vel']-velerr
-        vcentmax = row['vel']+velerr
+        vcentmin = row['vel'] - velerr
+        vcentmax = row['vel'] + velerr
         v1 = vcentmin + row['vlim1']
         v2 = vcentmax + row['vlim2']
-        line=AbsLine(row['restwave']*u.AA, z=row['zsys'],closest=True, linelist=llist)
-        vlims=[v1,v2]*u.km/u.s
+        line = AbsLine(row['restwave'] * u.AA,
+                       z=row['zsys'],
+                       closest=True,
+                       linelist=llist)
+        vlims = [v1, v2] * u.km / u.s
         line.limits.set(vlims)
         ### Set other parameters
         line.attrib['logN'] = row['col']
         line.attrib['sig_logN'] = colerr
         line.attrib['flag_N'] = 1
         lincol = ltaa.linear_clm(line.attrib)
-        line.attrib['N']= lincol[0]
+        line.attrib['N'] = lincol[0]
         line.attrib['sig_N'] = lincol[1]
-        line.attrib['b'] = row['bval'] * u.km/u.s
-        line.attrib['sig_b'] = berr * u.km/u.s
-        line.attrib['vel'] = row['vel'] * u.km/u.s
+        line.attrib['b'] = row['bval'] * u.km / u.s
+        line.attrib['sig_b'] = berr * u.km / u.s
+        line.attrib['vel'] = row['vel'] * u.km / u.s
         ### Attach the spectrum to this AbsLine but check first to see if this one is same as previous
-        if specfile==None:
-            if i==0:
-                spec=readspec(row['specfile'])
-            elif row['specfile']!=linetab['specfile'][i-1]:
-                spec=readspec(row['specfile'])
+        if specfile == None:
+            if i == 0:
+                spec = readspec(row['specfile'])
+            elif row['specfile'] != linetab['specfile'][i - 1]:
+                spec = readspec(row['specfile'])
             else:
                 pass
-        line.analy['spec']=spec
+        line.analy['spec'] = spec
         ### Add it to the list and go on
         abslinelist.append(line)
     return abslinelist
 
-def get_errors(partable,idx2check):
+
+def get_errors(partable, idx2check):
     '''
     Get actual error values from VP fitting.
     When lines are tied in fit, algorithm returns '0' for all lines but 1 in fit.
@@ -321,48 +348,63 @@ def get_errors(partable,idx2check):
     row = partable[idx2check]
 
     ### Process column density, Doppler b value, then velocity centroid
-    if row['sigcol']==0:  # Check to see if errors for this line are defined
-        simulfit=np.where((partable['nflag']==row['nflag'])&(partable['zsys']==row['zsys']))[0] # Find lines tied to this one
-        if len(simulfit)>0: # Are there any?
-            simulfit_nz=simulfit[np.where(partable['nflag'][simulfit]!=0)[0]]  # Find the one(s) with nonzero errors
-            if len(simulfit_nz)>0: # Are there any?
-                colerr=partable['sigcol'][simulfit_nz[0]] # Adopt nonzero error of this row
+    if row['sigcol'] == 0:  # Check to see if errors for this line are defined
+        simulfit = np.where((partable['nflag'] == row['nflag']) & (
+            partable['zsys'] == row['zsys']))[0]  # Find lines tied to this one
+        if len(simulfit) > 0:  # Are there any?
+            simulfit_nz = simulfit[np.where(partable['nflag'][simulfit] != 0)
+                                   [0]]  # Find the one(s) with nonzero errors
+            if len(simulfit_nz) > 0:  # Are there any?
+                colerr = partable['sigcol'][
+                    simulfit_nz[0]]  # Adopt nonzero error of this row
             else:
-                colerr=row['sigcol'] # No nonzero errors; accept value from table read in
+                colerr = row[
+                    'sigcol']  # No nonzero errors; accept value from table read in
         else:
-            colerr=row['sigcol'] # No rows tied to this one; accept value from table read in
+            colerr = row[
+                'sigcol']  # No rows tied to this one; accept value from table read in
     else:
-        colerr=row['sigcol'] # This row has nonzero errors; accept value from table read in
+        colerr = row[
+            'sigcol']  # This row has nonzero errors; accept value from table read in
 
-    if row['sigbval']==0:
-        simulfit=np.where((partable['bflag']==row['bflag'])&(partable['zsys']!=row['zsys']))[0]
-        if len(simulfit)>0:
-            simulfit_nz=simulfit[np.where(partable['bflag'][simulfit]!=0)[0]]
-            if len(simulfit_nz)>0:
-                berr=partable['sigbval'][simulfit_nz[0]]
+    if row['sigbval'] == 0:
+        simulfit = np.where((partable['bflag'] == row['bflag'])
+                            & (partable['zsys'] != row['zsys']))[0]
+        if len(simulfit) > 0:
+            simulfit_nz = simulfit[np.where(
+                partable['bflag'][simulfit] != 0)[0]]
+            if len(simulfit_nz) > 0:
+                berr = partable['sigbval'][simulfit_nz[0]]
             else:
-                berr=row['sigbval']
+                berr = row['sigbval']
         else:
-            berr=row['sigbval']
+            berr = row['sigbval']
     else:
-        berr=row['sigbval']
+        berr = row['sigbval']
 
-    if row['sigvel']==0:
-        simulfit=np.where((partable['vflag']==row['vflag'])&(partable['zsys']!=row['zsys']))[0]
-        if len(simulfit)>0:
-            simulfit_nz=simulfit[np.where(partable['vflag'][simulfit]!=0)[0]]
-            if len(simulfit_nz)>0:
-                velerr=partable['sigvel'][simulfit_nz[0]]
+    if row['sigvel'] == 0:
+        simulfit = np.where((partable['vflag'] == row['vflag'])
+                            & (partable['zsys'] != row['zsys']))[0]
+        if len(simulfit) > 0:
+            simulfit_nz = simulfit[np.where(
+                partable['vflag'][simulfit] != 0)[0]]
+            if len(simulfit_nz) > 0:
+                velerr = partable['sigvel'][simulfit_nz[0]]
             else:
-                velerr=row['sigvel']
+                velerr = row['sigvel']
         else:
-            velerr=row['sigvel']
+            velerr = row['sigvel']
     else:
-        velerr=row['sigvel']
+        velerr = row['sigvel']
 
     return colerr, berr, velerr
 
-def inspect_fits(parfile,output='FitInspection.pdf',vlim=[-300,300]*u.km/u.s,rchi2filepath='.', **kwargs):
+
+def inspect_fits(parfile,
+                 output='FitInspection.pdf',
+                 vlim=[-300, 300] * u.km / u.s,
+                 rchi2filepath='.',
+                 **kwargs):
     '''
     Produce pdf of fitting results for quality check.
 
@@ -386,13 +428,16 @@ def inspect_fits(parfile,output='FitInspection.pdf',vlim=[-300,300]*u.km/u.s,rch
     from matplotlib.backends.backend_pdf import PdfPages
     llist = LineList('ISM')
 
-    pp=PdfPages(output)
+    pp = PdfPages(output)
 
     #import pdb;
     #pdb.set_trace()
-    all=abslines_from_VPfile(parfile,linelist=llist,**kwargs) # Instantiate AbsLine objects and make list
-    acl=abscomponents_from_abslines(all,vtoler=15.)  # Instantiate AbsComponent objects from this list
-    fitpars,fiterrors,parinfo,linecmts = stevebvpfit.readpars(parfile)
+    all = abslines_from_VPfile(
+        parfile, linelist=llist,
+        **kwargs)  # Instantiate AbsLine objects and make list
+    acl = abscomponents_from_abslines(
+        all, vtoler=15.)  # Instantiate AbsComponent objects from this list
+    fitpars, fiterrors, parinfo, linecmts = stevebvpfit.readpars(parfile)
 
     try:
         groupnames = ascii.read(parfile)['groupfilename']
@@ -400,80 +445,104 @@ def inspect_fits(parfile,output='FitInspection.pdf',vlim=[-300,300]*u.km/u.s,rch
     except KeyError:
         groupnames = []
 
-    fullmodel=makevoigt.cosvoigt(all[0].analy['spec'].wavelength.value,fitpars)
+    fullmodel = makevoigt.cosvoigt(all[0].analy['spec'].wavelength.value,
+                                   fitpars)
 
     # reduced chi^2 part:
 
-    if rchi2filepath!='.':
+    if rchi2filepath != '.':
 
         rchi2file = open(rchi2filepath)
         rchi2 = rchi2file.read()
         rchi2file.close()
     ### Make a stackplot for each component
-    for jj,comp in enumerate(acl):
-        fig=comp.stack_plot(ymnx=(-0.1,1.3),show=False,return_fig=True,vlim=vlim, tight_layout=True)
-        if (len(comp._abslines)<6):
-            numrow = len(comp._abslines)%6
+    for jj, comp in enumerate(acl):
+        fig = comp.stack_plot(ymnx=(-0.1, 1.3),
+                              show=False,
+                              return_fig=True,
+                              vlim=vlim,
+                              tight_layout=True)
+        if (len(comp._abslines) < 6):
+            numrow = len(comp._abslines) % 6
         else:
             numrow = 6
-        height = numrow*1.0+0.5
+        height = numrow * 1.0 + 0.5
         fig.set_figheight(height)
-        if len(comp._abslines)<6:
+        if len(comp._abslines) < 6:
             fig.set_figwidth(5.)
         else:
             fig.set_figwidth(10.)
         stackaxes = fig.axes
-        for i,ax in enumerate(stackaxes):
+        for i, ax in enumerate(stackaxes):
             line = comp._abslines[i]
-            thesepars=[[line.wrest.value],[line.attrib['logN']],[line.attrib['b'].value],
-                       [line.z],[line.attrib['vel'].value],[line.limits.vlim[0].value],[line.limits.vlim[1].value]]
-            theseperrs = [[line.attrib['sig_b'].value],[line.attrib['sig_vel'].value]]
+            thesepars = [[line.wrest.value], [line.attrib['logN']],
+                         [line.attrib['b'].value], [line.z],
+                         [line.attrib['vel'].value],
+                         [line.limits.vlim[0].value],
+                         [line.limits.vlim[1].value]]
+            theseperrs = [[line.attrib['sig_b'].value],
+                          [line.attrib['sig_vel'].value]]
             try:
-                thismodel=makevoigt.cosvoigt(line.analy['spec'].wavelength.value,thesepars)
+                thismodel = makevoigt.cosvoigt(
+                    line.analy['spec'].wavelength.value, thesepars)
             except:
-                ax.text(-100,0.05,'These pixels not used to fit this line')
+                ax.text(-100, 0.05, 'These pixels not used to fit this line')
                 continue
 
             # determining status of fit error flag:
 
             # velocity error condition
-            if np.abs(theseperrs[1]) > np.abs(np.array(thesepars[-1]) - np.array(thesepars[-2])):
-                ax.text(100,0.4,'ErrorFlag=1',fontsize=8)
+            if np.abs(theseperrs[1]) > np.abs(
+                    np.array(thesepars[-1]) - np.array(thesepars[-2])):
+                ax.text(100, 0.4, 'ErrorFlag=1', fontsize=8)
             # b error condition
-            if np.abs(theseperrs[0]) > (np.abs(thesepars[2])+20):
-                ax.text(100,0.4,'ErrorFlag=1',fontsize=8)
+            if np.abs(theseperrs[0]) > (np.abs(thesepars[2]) + 20):
+                ax.text(100, 0.4, 'ErrorFlag=1', fontsize=8)
 
             # match versus some line params from parfile to get the correct groupnames index:
 
             # print group names for the concatenated one:
-            if groupnames!=[]:
-                groupno = np.array(groupnames)[np.isclose(zsys,np.array(fitpars[3])[np.where(fitpars[3]==line.z)][0])]
-                ax.text(-293,0.3,groupno[0].split('./component_groups/')[1],fontsize=8)
+            if groupnames != []:
+                groupno = np.array(groupnames)[np.isclose(
+                    zsys,
+                    np.array(fitpars[3])[np.where(fitpars[3] == line.z)][0])]
+                ax.text(-293,
+                        0.3,
+                        groupno[0].split('./component_groups/')[1],
+                        fontsize=8)
 
-            axlin=ax.get_lines()
-            veldat=axlin[0].get_data()[0]
-            ax.plot(veldat,fullmodel,color='red',alpha=0.8)
-            ax.plot(veldat,thismodel,color='purple',linestyle='dashed')
-            if rchi2filepath!='.':
-                ax.text(100,0.16,'rchi^2='+rchi2[0:6])
-        botbuf = 0.5/height
-        fig.subplots_adjust(bottom=botbuf,left=0.1,right=0.95,hspace=0.,wspace=0.35)
+            axlin = ax.get_lines()
+            veldat = axlin[0].get_data()[0]
+            ax.plot(veldat, fullmodel, color='red', alpha=0.8)
+            ax.plot(veldat, thismodel, color='purple', linestyle='dashed')
+            if rchi2filepath != '.':
+                ax.text(100, 0.16, 'rchi^2=' + rchi2[0:6])
+        botbuf = 0.5 / height
+        fig.subplots_adjust(bottom=botbuf,
+                            left=0.1,
+                            right=0.95,
+                            hspace=0.,
+                            wspace=0.35)
 
-        title=comp.name
+        title = comp.name
         fig.suptitle(title)
-        fig.savefig(pp,format='pdf')
+        fig.savefig(pp, format='pdf')
         plt.close(fig)
 
     ### Write out full model fits file
-    normflux = line.analy['spec'].flux/line.analy['spec'].co
+    normflux = line.analy['spec'].flux / line.analy['spec'].co
     normsig = line.analy['spec'].sig / line.analy['spec'].co
-    modeltab = Table([line.analy['spec'].wavelength.value, fullmodel, normflux, normsig], names=['wavelength', 'model', 'normflux', 'normsig'])
+    modeltab = Table(
+        [line.analy['spec'].wavelength.value, fullmodel, normflux, normsig],
+        names=['wavelength', 'model', 'normflux', 'normsig'])
     # modeltab.write(outfile, format='fits', overwrite=True)
     dummycont = np.ones(len(normflux))
-    spec = XSpectrum1D.from_tuple((modeltab['wavelength'], modeltab['model'], modeltab['normsig'], dummycont))
-    spec.write_to_fits(output[:-4]+'.fits')
+    spec = XSpectrum1D.from_tuple((modeltab['wavelength'], modeltab['model'],
+                                   modeltab['normsig'], dummycont))
+    spec.write_to_fits(output[:-4] + '.fits')
 
     pp.close()
+
 
 def abscomponents_from_abslines(abslinelist, **kwargs):
     '''
@@ -494,54 +563,62 @@ def abscomponents_from_abslines(abslinelist, **kwargs):
     from linetools.isgm.abscomponent import AbsComponent
 
     ### Populate arrays with line redshifts, velocity centroids, and name of species
-    zarr=np.zeros(len(abslinelist))
-    varr=np.zeros(len(abslinelist))
-    sparr=np.chararray(len(abslinelist),itemsize=6)
-    for i,absline in enumerate(abslinelist):
-        zarr[i]=absline.z
+    zarr = np.zeros(len(abslinelist))
+    varr = np.zeros(len(abslinelist))
+    sparr = np.chararray(len(abslinelist), itemsize=6)
+    for i, absline in enumerate(abslinelist):
+        zarr[i] = absline.z
         # import pdb;        pdb.set_trace()
-        varr[i]=absline.attrib['vel'].value
-        sparr[i]=atomicdata.lam2ion(absline.wrest.value)
+        varr[i] = absline.attrib['vel'].value
+        sparr[i] = atomicdata.lam2ion(absline.wrest.value)
 
-    abslinelist=np.array(abslinelist) # Convert to array for the indexing used below
+    abslinelist = np.array(
+        abslinelist)  # Convert to array for the indexing used below
 
     ### Group lines with the same redshifts and similar velocities
-    complines=[]
-    uqzs=np.unique(zarr)
+    complines = []
+    uqzs = np.unique(zarr)
     for uqz in uqzs:
         ### Identify velocity groups
-        thesez = np.where(zarr==uqz)[0]
-        X = np.array(list(zip(varr[thesez],np.zeros(len(varr[thesez])))), dtype=float)
+        thesez = np.where(zarr == uqz)[0]
+        X = np.array(list(zip(varr[thesez], np.zeros(len(varr[thesez])))),
+                     dtype=float)
         ms = MeanShift(bandwidth=7.)
         ms.fit(X)
         vidxs = ms.labels_
         vs = ms.cluster_centers_
-        uqvidxs=np.unique(vidxs)
+        uqvidxs = np.unique(vidxs)
         ### Make lists of lines that will belong to each component
         for idx in uqvidxs:
-            theseuqvs=thesez[np.where(vidxs==idx)[0]] # isolate velocity-grouped lines with this redshift
-            uqsp=np.unique(sparr[theseuqvs]) # identify the unique species with lines in this group
+            theseuqvs = thesez[np.where(
+                vidxs ==
+                idx)[0]]  # isolate velocity-grouped lines with this redshift
+            uqsp = np.unique(
+                sparr[theseuqvs]
+            )  # identify the unique species with lines in this group
             ### Get lines belonging to each species and add them to become components
             for sp in uqsp:
-                spidx=theseuqvs[np.where(sparr[theseuqvs]==sp)]
+                spidx = theseuqvs[np.where(sparr[theseuqvs] == sp)]
                 complines.append(abslinelist[spidx])
     ### Instantiate the AbsComponents
-    comps=[]
+    comps = []
     for lst in complines:
         if '*' in lst[0].name:
-            linename=lst[0].name
-            starct=linename.count('*')
-            stars='*'*starct
+            linename = lst[0].name
+            starct = linename.count('*')
+            stars = '*' * starct
         else:
             stars = None
-        thiscomp=AbsComponent.from_abslines(lst.tolist(), stars=stars,
-                                            chk_vel=False, adopt_median=True,
-                                            **kwargs)
+        thiscomp = AbsComponent.from_abslines(lst.tolist(),
+                                              stars=stars,
+                                              chk_vel=False,
+                                              adopt_median=True,
+                                              **kwargs)
         comps.append(thiscomp)
     return comps
 
-def pyigm_to_veeper(json, fits):
 
+def pyigm_to_veeper(json, fits):
     '''
     Converts from a werksquad igmguesses .json file to veeper-fitted components.
 
@@ -566,9 +643,9 @@ def pyigm_to_veeper(json, fits):
     coincident = utils.group_coincident_components(comp)
 
     # to reduce clutter:
-    path = os.path.join('.','component_groups')
+    path = os.path.join('.', 'component_groups')
     os.makedirs(path, exist_ok=True)
     # Make each set of grouped components into a .txt file suitable for veeper input.
-    for ii,group in enumerate(coincident):
+    for ii, group in enumerate(coincident):
         savename = 'component_groups/input_group_{}.txt'.format(ii)
-        io.write_joebvp_from_components(group,fits,savename)
+        io.write_joebvp_from_components(group, fits, savename)
