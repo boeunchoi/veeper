@@ -449,7 +449,31 @@ def fitpix(wave, pararr, find_bad_pixels=True):
             relpix.extend(range(p1 - 10, len(wave) - 1))
     rp = np.unique(np.array(relpix))
     clean_rp = np.array([i for i in rp if i not in cfg.bad_pixels])
-    return clean_rp
+
+    # Matt and Kirill trimming off tiny pixel patches
+    max_index_jump = 4  # this is called buf in makevoigt
+    min_group_size = 5
+
+    last_idx = clean_rp[0]
+    group_idxs = [last_idx]
+    really_clean_rp = []
+    for idx in clean_rp[1:]:
+        jump = idx - last_idx
+        if jump <= max_index_jump:
+            group_idxs.append(idx)
+        else:
+            if len(group_idxs) >= min_group_size:
+                really_clean_rp.extend(group_idxs)
+            group_idxs = [idx]  # start a new group
+
+        last_idx = idx
+
+    if len(group_idxs) >= min_group_size:
+        really_clean_rp.extend(group_idxs)
+
+    print("joe fitpix")
+
+    return np.array(really_clean_rp, dtype=int)
 
 
 def stevevoigterrfunc(x, xall0, notfixed, indices, wavelength, flux, sig):
