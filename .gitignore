@@ -8,5 +8,10 @@ joebvp/pg1407_vpinput_2.dat
 # Setuptools distribution folder.
 /dist/
 
+/build/
+
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
+
+#Mac
+*.DS_Store
