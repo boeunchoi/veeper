@@ -78,14 +78,33 @@ def voigtfunc(vwave, vpars):
     if len(cfg.lsfs) == 0:
         makevoigt.get_lsfs()
 
-    vflux = np.zeros(len(vwave)) + 1.
+    #vflux = np.zeros(len(vwave)) + 1.
     ### redo voigt function w/ numpy?
     factor = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3],
                              vpars[4])
     convfactor = makevoigt.convolvecos(vwave, factor, vpars[0], vpars[3])
-    vflux *= convfactor
+    #vflux *= convfactor
+    #get rid of vflux multiplication, it's just multiplying everything by 1
 
-    return vflux
+    return convfactor
+
+
+def voigtfunc_and_jac(vwave, vpars):
+    ### Check to see if cfg variables are set
+    if isinstance(cfg.fitidx, int) | isinstance(cfg.wave, int):
+        cfg.fitidx = fitpix(vwave, vpars)
+        cfg.wave = vwave
+    if len(cfg.lsfs) == 0:
+        makevoigt.get_lsfs()
+
+    g, dg_dcol, dg_dv, dg_b = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3],
+                             vpars[4])
+
+    convfactor = makevoigt.convolvecos(vwave, factor, vpars[0], vpars[3])
+    #going to do another makevoigt convolvecos call
+    convjac = None
+
+    return convfactor, convjac
 
 
 def readpars(filename, wave1=None, wave2=None):
@@ -470,8 +489,6 @@ def fitpix(wave, pararr, find_bad_pixels=True):
 
     if len(group_idxs) >= min_group_size:
         really_clean_rp.extend(group_idxs)
-
-    print("joe fitpix")
 
     return np.array(really_clean_rp, dtype=int)
 
