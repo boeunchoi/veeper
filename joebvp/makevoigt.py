@@ -137,9 +137,9 @@ def voigt_and_jac(waves, line, coldens, bval, z, vels):
         dx_db = -x/b
         da_db = -a/b
 
-        K, dK_dx, dK_da = Hfunc(x, a)
+        K, dK_dx, dK_da = Hfunc_w_jac(x, a)
         multiplier = col_to_tau_const * (lam0 * 1e-8)**2 * 1e8 * fosc
-        tauval =  multiplier * (10**cd) * vp / dlam
+        tauval =  multiplier * (10**cd) * K / dlam
         dg_dcol[i, :] = tauval * np.log(10)
         dg_dv[i, :] = (10**cd * multiplier * dx_dv/dlam) * dK_dx
 

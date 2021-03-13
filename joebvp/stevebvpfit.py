@@ -78,18 +78,14 @@ def voigtfunc(vwave, vpars):
     if len(cfg.lsfs) == 0:
         makevoigt.get_lsfs()
 
-    #vflux = np.zeros(len(vwave)) + 1.
-    ### redo voigt function w/ numpy?
     factor = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3],
                              vpars[4])
     convfactor = makevoigt.convolvecos(vwave, factor, vpars[0], vpars[3])
-    #vflux *= convfactor
-    #get rid of vflux multiplication, it's just multiplying everything by 1
 
     return convfactor
 
 
-def voigtfunc_and_jac(vwave, vpars):
+def voigtfunc_and_jac(vwave, vpars, convolve_jac=True):
     ### Check to see if cfg variables are set
     if isinstance(cfg.fitidx, int) | isinstance(cfg.wave, int):
         cfg.fitidx = fitpix(vwave, vpars)
@@ -97,14 +93,24 @@ def voigtfunc_and_jac(vwave, vpars):
     if len(cfg.lsfs) == 0:
         makevoigt.get_lsfs()
 
-    g, dg_dcol, dg_dv, dg_b = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3],
+    g, dg_dcol, dg_dv, dg_db = makevoigt.voigt_and_jac(vwave[cfg.fitidx],
+                                                       vpars[0], vpars[1],
+                                                        vpars[2], vpars[3],
                              vpars[4])
+    g_full = np.ones(len(vwave))
+    g_full[cfg.fitidx] = g
+    convfactor = makevoigt.convolvecos(vwave, g_full, vpars[0], vpars[3])
 
-    convfactor = makevoigt.convolvecos(vwave, factor, vpars[0], vpars[3])
-    #going to do another makevoigt convolvecos call
-    convjac = None
+    jac = np.vstack([dg_dcol, dg_db, dg_dv])
+    jac_full = np.zeros([jac.shape[0], len(vwave)])
+    jac_full[:, cfg.fitidx] = jac
+    #might be better to wait to do the convolution until after things are agglomerated
+    if convolve_jac:
+        for e, row in enumerate(jac_full):
+            #minus 1 plus 1 because convolvecos pads with 1s
+            jac_full[e] = makevoigt.convolvecos(vwave, 1+row, vpars[0], vpars[3])-1
 
-    return convfactor, convjac
+    return convfactor, jac_full
 
 
 def readpars(filename, wave1=None, wave2=None):
@@ -469,28 +475,31 @@ def fitpix(wave, pararr, find_bad_pixels=True):
     rp = np.unique(np.array(relpix))
     clean_rp = np.array([i for i in rp if i not in cfg.bad_pixels])
 
-    # Matt and Kirill trimming off tiny pixel patches
-    max_index_jump = 4  # this is called buf in makevoigt
-    min_group_size = 5
+    if len(clean_rp) > 1:
+        # Matt and Kirill trimming off tiny pixel patches
+        max_index_jump = 4  # this is called buf in makevoigt
+        min_group_size = 5
 
-    last_idx = clean_rp[0]
-    group_idxs = [last_idx]
-    really_clean_rp = []
-    for idx in clean_rp[1:]:
-        jump = idx - last_idx
-        if jump <= max_index_jump:
-            group_idxs.append(idx)
-        else:
-            if len(group_idxs) >= min_group_size:
-                really_clean_rp.extend(group_idxs)
-            group_idxs = [idx]  # start a new group
+        last_idx = clean_rp[0]
+        group_idxs = [last_idx]
+        really_clean_rp = []
+        for idx in clean_rp[1:]:
+            jump = idx - last_idx
+            if jump <= max_index_jump:
+                group_idxs.append(idx)
+            else:
+                if len(group_idxs) >= min_group_size:
+                    really_clean_rp.extend(group_idxs)
+                group_idxs = [idx]  # start a new group
 
-        last_idx = idx
+            last_idx = idx
 
-    if len(group_idxs) >= min_group_size:
-        really_clean_rp.extend(group_idxs)
+        if len(group_idxs) >= min_group_size:
+            really_clean_rp.extend(group_idxs)
 
-    return np.array(really_clean_rp, dtype=int)
+        return np.array(really_clean_rp, dtype=int)
+    else:
+        return clean_rp
 
 
 def stevevoigterrfunc(x, xall0, notfixed, indices, wavelength, flux, sig):
@@ -509,6 +518,41 @@ def stevevoigterrfunc(x, xall0, notfixed, indices, wavelength, flux, sig):
     except AttributeError:
         pass
     return (residuals)
+
+
+def stevevoigterrfunc_w_jac(x, xall0, notfixed, indices, wavelength, flux, sig):
+    xall = xall0.copy()
+
+    xall[notfixed] = x[indices]
+
+    folded_xall = np.asarray(foldpars(xall))
+    model, jac = voigtfunc_and_jac(wavelength, folded_xall, convolve_jac=False)
+    status = 0
+
+    residuals = (flux[cfg.fitidx] - model[cfg.fitidx]) / sig[cfg.fitidx]
+
+    jac = jac[:, cfg.fitidx].reshape([3, -1, len(residuals)])
+    jac_x = np.zeros([len(x), jac.shape[2]])
+    line_inds, var_inds = np.unravel_index(notfixed, folded_xall.T.shape)
+    var_ind_mapping_dict = {1:0, 2:1, 4:2}
+    for x_ind, line_ind, var_ind in zip(indices, line_inds, var_inds):
+        jac_x[x_ind] += jac[var_ind_mapping_dict[var_ind], line_ind]
+
+    jac_full = np.zeros([len(x), len(wavelength)])
+    jac_full[:, cfg.fitidx] = jac_x
+    for row_e, row in enumerate(jac_full):
+        jac_full[row_e] = makevoigt.convolvecos(wavelength,
+                                                row+1, None, None)-1
+    jac_x = jac_full[:, cfg.fitidx]
+
+    jac_x /= sig[cfg.fitidx]
+    jac_x *= -1
+
+    try:
+        residuals = residuals.value
+    except AttributeError:
+        pass
+    return residuals, jac_x
 
 
 def update_bad_pixels():
@@ -807,13 +851,34 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
     ]
 
     # here is where fitting happens:
+    cache = {'x':np.nan, 'resid':np.nan, 'jac':np.nan}
 
-    m = least_squares(stevevoigterrfunc,
+    def cached_resid(x, cache):
+        if np.all(x == cache['x']):
+            return cache['resid']
+        cache['x'] = x.copy()
+        resid, jac = stevevoigterrfunc_w_jac(x, *arg)
+        cache['resid'] = resid
+        cache['jac'] = jac.T
+        return resid
+
+    def cached_jac(x, cache):
+        if np.all(x == cache['x']):
+            return cache['jac']
+        cache['x'] = x.copy()
+        resid, jac = stevevoigterrfunc_w_jac(x, *arg)
+        cache['resid'] = resid
+        cache['jac'] = jac.T
+        return jac.T
+
+
+    m = least_squares(cached_resid,
                       x,
                       bounds=bnds,
-                      args=arg,
+                      args=(cache,),
                       kwargs={},
-                      verbose=True)
+                      verbose=True,
+                      jac=cached_jac)
 
     if m.status < 0: print('Fitting error:', m.message)
 
