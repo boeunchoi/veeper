@@ -42,6 +42,16 @@ def Hfunc(x, a):
     return I
 
 
+def Hfunc_w_jac(x, a):
+    z = x + 1j * a
+    w = wofz(z)
+    K = w.real
+    L = w.imag
+    dK_dx = - 2 * (x * K - a * L)
+    dK_dy = 2 * (x * L + a * K) - 2/np.sqrt(np.pi)
+    return K, dK_dx, dK_dy
+
+
 def cosvoigt(vwave, vpars):
     from joebvp import joebvpfit
     pars, info = joebvpfit.initlinepars(vpars[3],
@@ -97,6 +107,54 @@ def voigt(waves, line, coldens, bval, z, vels):
     return np.exp(-tautot)
 
 
+def voigt_and_jac(waves, line, coldens, bval, z, vels):
+    col_to_tau_const = np.sqrt(np.pi) * cfg.echarge**2 / cfg.m_e / cfg.c**2
+    n_waves = len(waves)
+    n_lines = len(coldens)
+    tautot = np.zeros(n_waves)
+
+    dg_dcol = np.zeros([n_lines, n_waves])
+    dg_db = np.zeros([n_lines, n_waves])
+    dg_dv = np.zeros([n_lines, n_waves])
+
+    if len(cfg.lams) == 0:
+        lam, fosc, gam = atomicdata.setatomicdata(line)
+        cfg.lams = lam
+        cfg.fosc = fosc
+        cfg.gam = gam
+    for i, (cd, b, vel) in enumerate(zip(coldens, bval, vels)):
+        #thatfactor=(1.+z[i])*(1.+vels[i]/c)
+        thatfactor = (1. + z[i])
+
+        lam0 = cfg.lams[i]
+        gam = cfg.gam[i]
+        fosc = cfg.fosc[i]
+        lam = waves / thatfactor
+        dlam = b * lam0 / c  #Doppler param in wavelength
+        x = (lam - lam0 - lam0 * vel / c) / dlam
+        a = gam / (4. * np.pi * (c * 1e13 / lam0**2 * dlam))
+        dx_dv = -lam0 / (c*dlam)
+        dx_db = -x/b
+        da_db = -a/b
+
+        K, dK_dx, dK_da = Hfunc_w_jac(x, a)
+        multiplier = col_to_tau_const * (lam0 * 1e-8)**2 * 1e8 * fosc
+        tauval =  multiplier * (10**cd) * K / dlam
+        dg_dcol[i, :] = tauval * np.log(10)
+        dg_dv[i, :] = (10**cd * multiplier * dx_dv/dlam) * dK_dx
+
+        dg_db[i, :] += -tauval / b
+        dg_db[i, :] += (10**cd * multiplier / (dlam) *
+                          dx_db * dK_dx + da_db * dK_da)
+
+        tautot += tauval
+    g = np.exp(-tautot)
+    dg_dcol *= -g
+    dg_dv *= -g
+    dg_db *= -g
+    return g, dg_dcol, dg_dv, dg_db
+
+
 def get_lsfs():
 
     lsfobjs = []
@@ -126,7 +184,7 @@ def get_lsfs():
             cfg.lsfs.append(lsf['kernel'])
             break
         else:
-            if multiple_gratings():
+            if multiple_gratings(cfg.wave[fg]):
                 break
             else:
                 lamobs = np.median(cfg.wave[fg])
@@ -172,22 +230,22 @@ def get_lsfs():
                 cfg.lsfs.append(lsf['kernel'])
 
 
-def multiple_gratings():
-    """ Check if the line spreads across the boundary between the gratings. 
-    If this is the case we cant use this line as the LSFs are incompatable. 
-    We will skip this line. 
+def multiple_gratings(test_wave=cfg.wave):
+    """ Check if the line spreads across the boundary between the gratings.
+    If this is the case we cant use this line as the LSFs are incompatable.
+    We will skip this line.
 
-    Checks whether the left and right edges of the wavelength range lie in the same 
-    grating region. 
+    Checks whether the left and right edges of the wavelength range lie in the same
+    grating region.
 
 
     Returns:
         Bool: if overlapping return true.
     """
-    lsfmatch_left = jbg.wherebetween(cfg.wave[0], cfg.lsfranges[:, 0],
+    lsfmatch_left = jbg.wherebetween(test_wave[0], cfg.lsfranges[:, 0],
                                      cfg.lsfranges[:, 1])
 
-    lsfmatch_right = jbg.wherebetween(cfg.wave[-1], cfg.lsfranges[:, 0],
+    lsfmatch_right = jbg.wherebetween(test_wave[-1], cfg.lsfranges[:, 0],
                                       cfg.lsfranges[:, 1])
 
     if lsfmatch_left != lsfmatch_right:
