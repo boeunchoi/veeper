@@ -509,7 +509,7 @@ def inspect_fits(parfile,
                     np.array(fitpars[3])[np.where(fitpars[3] == line.z)][0])]
                 ax.text(-293,
                         0.3,
-                        groupno[0].split('./component_groups/')[1],
+                        os.path.split(groupno[0])[-1],
                         fontsize=8)
 
             axlin = ax.get_lines()
