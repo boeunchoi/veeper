@@ -174,7 +174,8 @@ def get_lsfs():
                          pixel_scale=cfg.pixel_scales[i],
                          FWHM=cfg.fwhms[i])))
     cfg.lsfs = []
-    for fg in cfg.fgs:
+    fg_drop_list = []
+    for fg_e, fg in enumerate(cfg.fgs):
         if isinstance(fg, int):
             lamobs = cfg.wave[fg]
             lsfmatch = jbg.wherebetween(lamobs, cfg.lsfranges[:, 0],
@@ -185,7 +186,10 @@ def get_lsfs():
             break
         else:
             if multiple_gratings(cfg.wave[fg]):
-                break
+                #Wave region straddles gratings, LSF solution unclear
+                #not giving it an lsf, so also need to remove the wave region
+                #from the wave region list
+                fg_drop_list.append(fg_e)
             else:
                 lamobs = np.median(cfg.wave[fg])
                 lsfmatch = jbg.wherebetween(lamobs, cfg.lsfranges[:, 0],
@@ -228,6 +232,10 @@ def get_lsfs():
                 # 	QtCore.pyqtRestoreInputHook()
 
                 cfg.lsfs.append(lsf['kernel'])
+    #remove wave regions that don't have an LSF solution
+    #go backwards so that indices remain valid
+    for drop_idx in fg_drop_list[::-1]:
+        cfg.fgs.pop(drop_idx)
 
 
 def multiple_gratings(test_wave=cfg.wave):
