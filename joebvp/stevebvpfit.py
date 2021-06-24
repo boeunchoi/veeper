@@ -991,7 +991,7 @@ def fit_to_convergence(wave,
                                                     flux,
                                                     sig,
                                                     flags,
-                                                    linepars=linepars,
+                                                    linepars=fitpars,
                                                     xall=xall)
             fitpars = np.array(fitpars)
             print('Iteration', ctr, '-')
