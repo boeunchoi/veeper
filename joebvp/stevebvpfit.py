@@ -254,7 +254,7 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                 initpars[5].extend([initvals[5][i]])
                 initpars[6].extend([initvals[6][i]])
 
-    #blim alteration was removed from here
+    #cfg.lowblim alteration was removed from here
 
     parinfo = np.zeros([5, len(restwaves)], dtype=int)
     parinfo[0] = parinfo[0] + 1
