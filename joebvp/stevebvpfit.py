@@ -254,13 +254,7 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                 initpars[5].extend([initvals[5][i]])
                 initpars[6].extend([initvals[6][i]])
 
-    ### If hard limits on Doppler b-value are smaller or greater than cfg.lowblim or cfg.upperblim,
-    ### modify those limits
-    maxb = np.max(initpars[2][:])
-    minb = np.min(initpars[2][:])
-    if maxb > cfg.upperblim:
-        cfg.upperblim = maxb + 10.
-    if minb < cfg.lowblim: cfg.lowblim = minb - 2.
+    #cfg.lowblim alteration was removed from here
 
     parinfo = np.zeros([5, len(restwaves)], dtype=int)
     parinfo[0] = parinfo[0] + 1
@@ -402,9 +396,14 @@ def prepparinfo(linepars, parflags):
                     tiedpar = int(matches[0] * numpars + j)
                     parinfo[i * numpars +
                             j]['tied'] = 'p[' + str(tiedpar) + ']'
+        parinfo[numpars * i]['value'] = linepars[0][i]
+        parinfo[numpars * i + 3]['value'] = linepars[3][i]
         col = round(linepars[1][i], 2)
+        parinfo[numpars * i + 1]['value'] = linepars[1][i]
         vel = round(linepars[4][i], 2)
+        parinfo[numpars * i + 4]['value'] = linepars[4][i]
         bpar = round(linepars[2][i], 2)
+        parinfo[numpars * i + 2]['value'] = linepars[2][i]
         parinfo[numpars * i + 1]['limited'] = [1, 1]
         parinfo[numpars * i +
                 1]['limits'] = [round(col - 5., 2),
@@ -880,7 +879,13 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
                       verbose=True,
                       jac=cached_jac)
 
-    if m.status < 0: print('Fitting error:', m.message)
+    if m.status < 0:
+        print('Fitting error:', m.message)
+        done = True
+    elif m.status == 0:
+        done = False
+    else:
+        done = True
 
     xall_fitted = xall.copy()
 
@@ -942,7 +947,7 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
                 round(fitperr[4][i], 3)
             ]))
     print('\nReduced chi-squared: {0:f}'.format(rchi2))
-    return fitpars, fitperr, rchi2
+    return fitpars, fitperr, rchi2, done
 
 
 # ... the other main event:
@@ -981,18 +986,23 @@ def fit_to_convergence(wave,
     oldfitpars = np.zeros([7, len(fitpars[0])]) - 99
     ctr = 0
     okay = 1
-    while ((np.max(np.abs(fitpars - oldfitpars)) > itertol) & (ctr < maxiter)):
+    done = False
+    while (not done) and (ctr < maxiter):
+        maxdiff = np.max(np.abs(fitpars - oldfitpars))
+        if ctr > 0:
+            xall = None
+            #forces initial values to be taken from fitpars
         ctr += 1
 
         try:
             # so the fitpars from the last iteration doesn't get erased:
             oldfitpars = fitpars
-            fitpars, fiterrors, rchi2 = stevebvpfit(wave,
-                                                    flux,
-                                                    sig,
-                                                    flags,
-                                                    linepars=linepars,
-                                                    xall=xall)
+            fitpars, fiterrors, rchi2, done = stevebvpfit(wave,
+                                                            flux,
+                                                            sig,
+                                                            flags,
+                                                            linepars=fitpars,
+                                                            xall=xall)
             fitpars = np.array(fitpars)
             print('Iteration', ctr, '-')
 
@@ -1003,7 +1013,7 @@ def fit_to_convergence(wave,
             raise
 
     if okay != 0:
-        print('Fit converged after', ctr, 'iterations.')
+        print('Fit converged after', ctr, 'outer iterations.')
         return fitpars, fiterrors, rchi2
     else:
         return linepars, fiterrors, rchi2
