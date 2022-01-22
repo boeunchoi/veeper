@@ -21,6 +21,7 @@ import scipy.stats
 from joebvp.atomicdata import atomicdata
 from astropy import constants as const
 import sys, os
+
 try:
     import joebvp_cfg as cfg
 except:
@@ -41,7 +42,7 @@ from joebvp import makevoigt
 from joebvp import nmpfit
 
 ln2 = np.log(2)
-c = const.c.to('km/s').value
+c = const.c.to("km/s").value
 
 from linetools.spectra.xspectrum1d import XSpectrum1D
 
@@ -53,9 +54,9 @@ from scipy.optimize import leastsq
 def foldpars(pars, numpars=5):
     rows = len(pars) / numpars
     fpars = []
-    for i in np.arange(numpars, dtype='int'):
+    for i in np.arange(numpars, dtype="int"):
         fparrow = []
-        for j in np.arange(rows, dtype='int'):
+        for j in np.arange(rows, dtype="int"):
             fparrow.append(pars[i + numpars * j])
         fpars.append(fparrow)
     return fpars
@@ -65,7 +66,7 @@ def unfoldpars(pars, numpars=5):
     rows = len(pars[0])
     ufpars = []
     for j in range(rows):
-        for i in np.arange(numpars, dtype='int'):
+        for i in np.arange(numpars, dtype="int"):
             ufpars.append(pars[i][j])
     return ufpars
 
@@ -78,8 +79,7 @@ def voigtfunc(vwave, vpars):
     if len(cfg.lsfs) == 0:
         makevoigt.get_lsfs()
 
-    factor = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3],
-                             vpars[4])
+    factor = makevoigt.voigt(vwave, vpars[0], vpars[1], vpars[2], vpars[3], vpars[4])
     convfactor = makevoigt.convolvecos(vwave, factor, vpars[0], vpars[3])
 
     return convfactor
@@ -93,10 +93,9 @@ def voigtfunc_and_jac(vwave, vpars, convolve_jac=True):
     if len(cfg.lsfs) == 0:
         makevoigt.get_lsfs()
 
-    g, dg_dcol, dg_dv, dg_db = makevoigt.voigt_and_jac(vwave[cfg.fitidx],
-                                                       vpars[0], vpars[1],
-                                                        vpars[2], vpars[3],
-                             vpars[4])
+    g, dg_dcol, dg_dv, dg_db = makevoigt.voigt_and_jac(
+        vwave[cfg.fitidx], vpars[0], vpars[1], vpars[2], vpars[3], vpars[4]
+    )
     g_full = np.ones(len(vwave))
     g_full[cfg.fitidx] = g
     convfactor = makevoigt.convolvecos(vwave, g_full, vpars[0], vpars[3])
@@ -104,17 +103,17 @@ def voigtfunc_and_jac(vwave, vpars, convolve_jac=True):
     jac = np.vstack([dg_dcol, dg_db, dg_dv])
     jac_full = np.zeros([jac.shape[0], len(vwave)])
     jac_full[:, cfg.fitidx] = jac
-    #might be better to wait to do the convolution until after things are agglomerated
+    # might be better to wait to do the convolution until after things are agglomerated
     if convolve_jac:
         for e, row in enumerate(jac_full):
-            #minus 1 plus 1 because convolvecos pads with 1s
-            jac_full[e] = makevoigt.convolvecos(vwave, 1+row, vpars[0], vpars[3])-1
+            # minus 1 plus 1 because convolvecos pads with 1s
+            jac_full[e] = makevoigt.convolvecos(vwave, 1 + row, vpars[0], vpars[3]) - 1
 
     return convfactor, jac_full
 
 
 def readpars(filename, wave1=None, wave2=None):
-    '''
+    """
 
     Parameters
     ----------
@@ -137,60 +136,60 @@ def readpars(filename, wave1=None, wave2=None):
         Flags to be used in fit
     linecmts: list of lists
         Reliability and comment flags, e.g., from igmguesses
-    '''
+    """
     linelist = ascii.read(filename)
-    linerestwave = linelist['restwave'].data
-    linez = linelist['zsys'].data
+    linerestwave = linelist["restwave"].data
+    linez = linelist["zsys"].data
     if (wave1 == None) & (wave2 == None):
         lineshere = np.arange(len(linelist))
     elif ((wave1 == None) | (wave2 == None)) | (wave1 >= wave2):
         lineshere = np.arange(len(linelist))
         warnings.warn(
-            'Note that both \'wave1\' and \'wave2\' must be declared or neither must be. \n Loading all lines in list.'
+            "Note that both 'wave1' and 'wave2' must be declared or neither must be. \n Loading all lines in list."
         )
     else:
-        lineobswave = linerestwave * (1. + linez)
+        lineobswave = linerestwave * (1.0 + linez)
         lineshere = np.where((lineobswave > wave1) & (lineobswave < wave2))[0]
     linelist = linelist[lineshere]
-    linelist['ions'] = atomicdata.lam2ion(linelist['restwave'])
+    linelist["ions"] = atomicdata.lam2ion(linelist["restwave"])
 
-    linelist.sort(['ions', 'zsys', 'vel', 'restwave'])
+    linelist.sort(["ions", "zsys", "vel", "restwave"])
 
-    linerestwave = linelist['restwave']
-    zs = linelist['zsys']
-    linecol = linelist['col']
-    lineb = linelist['bval']
-    linevel = linelist['vel']
-    linevlim1 = linelist['vlim1']
-    linevlim2 = linelist['vlim2']
-    colflag = linelist['nflag']
-    bflag = linelist['bflag']
-    velflag = linelist['vflag']
+    linerestwave = linelist["restwave"]
+    zs = linelist["zsys"]
+    linecol = linelist["col"]
+    lineb = linelist["bval"]
+    linevel = linelist["vel"]
+    linevlim1 = linelist["vlim1"]
+    linevlim2 = linelist["vlim2"]
+    colflag = linelist["nflag"]
+    bflag = linelist["bflag"]
+    velflag = linelist["vflag"]
     restwaves = linerestwave
-    if (('rely' in linelist.colnames) & ('comment' in linelist.colnames)):
+    if ("rely" in linelist.colnames) & ("comment" in linelist.colnames):
         pass
-    elif ('rely' in linelist.colnames):
-        linelist['comment'] = ['none'] * len(linelist)
+    elif "rely" in linelist.colnames:
+        linelist["comment"] = ["none"] * len(linelist)
     else:
-        linelist['rely'] = ['-'] * len(linelist)
-        linelist['comment'] = ['none'] * len(linelist)
+        linelist["rely"] = ["-"] * len(linelist)
+        linelist["comment"] = ["none"] * len(linelist)
 
-    reliability = linelist['rely']
-    comment = linelist['comment']
+    reliability = linelist["rely"]
+    comment = linelist["comment"]
     initinfo = [colflag, bflag, velflag]
     initpars = [restwaves, linecol, lineb, zs, linevel, linevlim1, linevlim2]
     fitpars, parinfo = initlinepars(zs, restwaves, initpars, initinfo=initinfo)
     fiterrors = np.zeros([5, len(fitpars[0])])  # Initialize errors to zero
-    #fiterrors[1] = colsig
-    #fiterrors[2] = bsig
-    #fiterrors[4] = velsig
+    # fiterrors[1] = colsig
+    # fiterrors[2] = bsig
+    # fiterrors[4] = velsig
     linecmts = [reliability, comment]
 
     return fitpars, fiterrors, parinfo, linecmts
 
 
 def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
-    '''
+    """
 
     Parameters
     ----------
@@ -213,7 +212,7 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
         Parameters for fit ready for fitter!
     parinfo : array of arrays
         Flags to be used in fit
-    '''
+    """
 
     ### Set atomic data for each line
     lam, fosc, gam = atomicdata.setatomicdata(restwaves)
@@ -230,7 +229,7 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
             initpars[1].extend([defaultcol])
             initpars[2].extend([defaultb])
             initpars[3].extend([zs[i]])
-            initpars[4].extend([0.])
+            initpars[4].extend([0.0])
             initpars[5].extend([-cfg.defaultvlim])
             initpars[6].extend([cfg.defaultvlim])
     else:
@@ -254,25 +253,28 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                 initpars[5].extend([initvals[5][i]])
                 initpars[6].extend([initvals[6][i]])
 
-    #cfg.lowblim alteration was removed from here
+    # cfg.lowblim alteration was removed from here
 
     parinfo = np.zeros([5, len(restwaves)], dtype=int)
     parinfo[0] = parinfo[0] + 1
     parinfo[3] = parinfo[3] + 1
-    if ((initinfo == []) & (initvals == [])):
+    if (initinfo == []) & (initvals == []):
 
         ### Look for multiplet membership of each line
         seriesassoc = np.zeros(len(restwaves)) - 99
         for i in range(len(restwaves)):
             for j in range(len(cfg.multiplets)):
                 currmult = np.array(cfg.multiplets[j])
-                if (abs(restwaves[i] -
-                        currmult[jbg.closest(currmult, restwaves[i])]) < 0.01):
+                if (
+                    abs(restwaves[i] - currmult[jbg.closest(currmult, restwaves[i])])
+                    < 0.01
+                ):
                     seriesassoc[i] = j
 
         uqions = np.unique(seriesassoc).tolist()
 
-        if -99 in uqions: uqions.remove(-99)
+        if -99 in uqions:
+            uqions.remove(-99)
         flagctr = 2
         for uqion in uqions:
             ionmatch = np.where(seriesassoc == uqion)[0]
@@ -291,9 +293,9 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                         numcomps.append(len(matches))
                     numcomps = np.array(numcomps)
                     complist = np.array(complist)
-                    compidxsort = sorted(range(len(numcomps)),
-                                         key=lambda x: numcomps[x],
-                                         reverse=True)
+                    compidxsort = sorted(
+                        range(len(numcomps)), key=lambda x: numcomps[x], reverse=True
+                    )
                     numcompsort = numcomps[compidxsort]
                     complistsort = complist[compidxsort]
                     maxcomps = numcompsort[0]
@@ -311,25 +313,28 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
         parinfo[1] = initinfo[0]
         parinfo[2] = initinfo[1]
         parinfo[4] = initinfo[2]
-    elif ((initinfo == []) & (initvals != [])):
+    elif (initinfo == []) & (initvals != []):
 
         ### Look for multiplet membership of each line
         seriesassoc = np.zeros(len(restwaves)) - 99
         for i in range(len(restwaves)):
             for j in range(len(cfg.multiplets)):
                 currmult = np.array(cfg.multiplets[j])
-                if (abs(restwaves[i] -
-                        currmult[jbg.closest(currmult, restwaves[i])]) < 0.01):
+                if (
+                    abs(restwaves[i] - currmult[jbg.closest(currmult, restwaves[i])])
+                    < 0.01
+                ):
                     seriesassoc[i] = j
 
         ### Fix measurements that are imported
         for i in range(len(restwaves)):
-            if ((initpars[1][i] != defaultcol) & (initpars[2][i] != defaultb)):
+            if (initpars[1][i] != defaultcol) & (initpars[2][i] != defaultb):
                 parinfo[1][i] = 1
                 parinfo[2][i] = 1
                 parinfo[4][i] = 1
         uqions = np.unique(seriesassoc).tolist()
-        if -99 in uqions: uqions.remove(-99)
+        if -99 in uqions:
+            uqions.remove(-99)
         flagctr = 2
         for uqion in uqions:
             ionmatch = np.where(seriesassoc == uqion)[0]
@@ -348,8 +353,9 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                         numcomps.append(len(matches))
                     numcomps = np.array(numcomps)
                     complist = np.array(complist)
-                    compidxsort = sorted(range(len(numcomps)),
-                                         key=lambda x: numcomps[x])
+                    compidxsort = sorted(
+                        range(len(numcomps)), key=lambda x: numcomps[x]
+                    )
                     complistsort = complist[compidxsort]
                     complistsort = complistsort.tolist()
                     for i in range(len(complistsort) - 1):
@@ -359,8 +365,8 @@ def initlinepars(zs, restwaves, initvals=[], initinfo=[]):
                             parinfo[4][idx] = flagctr
                             for j in range(i + 1, len(complistsort)):
                                 idxidx = jbg.closest(
-                                    initvals[4][complistsort[j]],
-                                    initvals[4][idx])
+                                    initvals[4][complistsort[j]], initvals[4][idx]
+                                )
                                 clidx = complistsort[j][idxidx]
                                 parinfo[1][clidx] = flagctr
                                 parinfo[2][clidx] = flagctr
@@ -376,73 +382,65 @@ def prepparinfo(linepars, parflags):
     parflags = np.array(parflags)
     numpars = 5
     for i in range(len(parflags[0])):
-        parinfo.extend([{
-            'fixed': 1
-        }, {
-            'fixed': 0
-        }, {
-            'fixed': 0
-        }, {
-            'fixed': 1
-        }, {
-            'fixed': 0
-        }])
+        parinfo.extend(
+            [{"fixed": 1}, {"fixed": 0}, {"fixed": 0}, {"fixed": 1}, {"fixed": 0}]
+        )
         for j in range(1, len(parflags)):
-            if parflags[j][i] == 1: parinfo[i * numpars + j]['fixed'] = 1
-            elif parflags[j][i] <= 0: parinfo[i * numpars + j]['fixed'] = 0
+            if parflags[j][i] == 1:
+                parinfo[i * numpars + j]["fixed"] = 1
+            elif parflags[j][i] <= 0:
+                parinfo[i * numpars + j]["fixed"] = 0
             else:
                 matches = np.where(np.array(parflags[j]) == parflags[j][i])[0]
                 if matches[0] != i:
                     tiedpar = int(matches[0] * numpars + j)
-                    parinfo[i * numpars +
-                            j]['tied'] = 'p[' + str(tiedpar) + ']'
-        parinfo[numpars * i]['value'] = linepars[0][i]
-        parinfo[numpars * i + 3]['value'] = linepars[3][i]
+                    parinfo[i * numpars + j]["tied"] = "p[" + str(tiedpar) + "]"
+        parinfo[numpars * i]["value"] = linepars[0][i]
+        parinfo[numpars * i + 3]["value"] = linepars[3][i]
         col = round(linepars[1][i], 2)
-        parinfo[numpars * i + 1]['value'] = linepars[1][i]
+        parinfo[numpars * i + 1]["value"] = linepars[1][i]
         vel = round(linepars[4][i], 2)
-        parinfo[numpars * i + 4]['value'] = linepars[4][i]
+        parinfo[numpars * i + 4]["value"] = linepars[4][i]
         bpar = round(linepars[2][i], 2)
-        parinfo[numpars * i + 2]['value'] = linepars[2][i]
-        parinfo[numpars * i + 1]['limited'] = [1, 1]
-        parinfo[numpars * i +
-                1]['limits'] = [round(col - 5., 2),
-                                round(col + 5., 2)]
-        parinfo[numpars * i + 2]['limited'] = [1, 1]
+        parinfo[numpars * i + 2]["value"] = linepars[2][i]
+        parinfo[numpars * i + 1]["limited"] = [1, 1]
+        parinfo[numpars * i + 1]["limits"] = [round(col - 5.0, 2), round(col + 5.0, 2)]
+        parinfo[numpars * i + 2]["limited"] = [1, 1]
         ### adjust b-value limits to allow for broadened HI features
         lydiff = abs(linepars[0][i] - cfg.lyseries)
         lymatch = np.where(abs(lydiff) <= 0.05)[0]
         if lymatch:
-            parinfo[numpars * i + 2]['limits'] = [
-                max([cfg.lowblim, bpar - 10.]),
-                min([bpar + 10, cfg.upperblim_HI])
+            parinfo[numpars * i + 2]["limits"] = [
+                max([cfg.lowblim, bpar - 10.0]),
+                min([bpar + 10, cfg.upperblim_HI]),
             ]
         else:
-            parinfo[numpars * i + 2]['limits'] = [
-                max([cfg.lowblim, bpar - 10.]),
-                min([bpar + 10, cfg.upperblim])
+            parinfo[numpars * i + 2]["limits"] = [
+                max([cfg.lowblim, bpar - 10.0]),
+                min([bpar + 10, cfg.upperblim]),
             ]
-        parinfo[numpars * i + 2]['step'] = 0.5
-        parinfo[numpars * i + 2]['mpside'] = 2
-        #parinfo[numpars*i+2]['relstep']=0.0001
-        parinfo[numpars * i + 4]['limited'] = [1, 1]
+        parinfo[numpars * i + 2]["step"] = 0.5
+        parinfo[numpars * i + 2]["mpside"] = 2
+        # parinfo[numpars*i+2]['relstep']=0.0001
+        parinfo[numpars * i + 4]["limited"] = [1, 1]
         ### Allow velocity to flop around
         if parflags[4][i] < 0:
             flopamt = abs(parflags[4][i])
-            parinfo[numpars * i + 4]['limits'] = [
+            parinfo[numpars * i + 4]["limits"] = [
                 round(vel - flopamt, 2),
-                round(vel + flopamt, 2)
+                round(vel + flopamt, 2),
             ]
         elif len(linepars) > 5:
             v1 = round(linepars[5][i], 2)
             v2 = round(linepars[6][i], 2)
-            parinfo[numpars * i + 4]['limits'] = [v1, v2]
+            parinfo[numpars * i + 4]["limits"] = [v1, v2]
         else:
-            parinfo[numpars * i +
-                    4]['limits'] = [round(vel - 50., 2),
-                                    round(vel + 50., 2)]
-        parinfo[numpars * i + 4]['step'] = 1.
-        #parinfo[numpars*i+4]['relstep']=0.01
+            parinfo[numpars * i + 4]["limits"] = [
+                round(vel - 50.0, 2),
+                round(vel + 50.0, 2),
+            ]
+        parinfo[numpars * i + 4]["step"] = 1.0
+        # parinfo[numpars*i+4]['relstep']=0.01
     return parinfo
 
 
@@ -450,7 +448,8 @@ def fitpix(wave, pararr, find_bad_pixels=True):
 
     if find_bad_pixels:
         # define bad pixels
-        cfg.bad_pixels = update_bad_pixels(
+        cfg.bad_pixels = (
+            update_bad_pixels()
         )  # this variable stores the indices of bad pixels
     else:
         cfg.bad_pixels = []
@@ -465,9 +464,9 @@ def fitpix(wave, pararr, find_bad_pixels=True):
         p1 = jbg.closest(vels, lv1[i])
         p2 = jbg.closest(vels, lv2[i])
 
-        if ((p1 >= 10) & (p2 <= (len(wave) - 1 - 10))):
+        if (p1 >= 10) & (p2 <= (len(wave) - 1 - 10)):
             relpix.extend(range(p1 - 10, p2 + 10))
-        elif (p1 < 10):
+        elif p1 < 10:
             relpix.extend(range(0, p2 + 10))
         else:
             relpix.extend(range(p1 - 10, len(wave) - 1))
@@ -516,7 +515,7 @@ def stevevoigterrfunc(x, xall0, notfixed, indices, wavelength, flux, sig):
         residuals = residuals.value
     except AttributeError:
         pass
-    return (residuals)
+    return residuals
 
 
 def stevevoigterrfunc_w_jac(x, xall0, notfixed, indices, wavelength, flux, sig):
@@ -533,15 +532,14 @@ def stevevoigterrfunc_w_jac(x, xall0, notfixed, indices, wavelength, flux, sig):
     jac = jac[:, cfg.fitidx].reshape([3, -1, len(residuals)])
     jac_x = np.zeros([len(x), jac.shape[2]])
     line_inds, var_inds = np.unravel_index(notfixed, folded_xall.T.shape)
-    var_ind_mapping_dict = {1:0, 2:1, 4:2}
+    var_ind_mapping_dict = {1: 0, 2: 1, 4: 2}
     for x_ind, line_ind, var_ind in zip(indices, line_inds, var_inds):
         jac_x[x_ind] += jac[var_ind_mapping_dict[var_ind], line_ind]
 
     jac_full = np.zeros([len(x), len(wavelength)])
     jac_full[:, cfg.fitidx] = jac_x
     for row_e, row in enumerate(jac_full):
-        jac_full[row_e] = makevoigt.convolvecos(wavelength,
-                                                row+1, None, None)-1
+        jac_full[row_e] = makevoigt.convolvecos(wavelength, row + 1, None, None) - 1
     jac_x = jac_full[:, cfg.fitidx]
 
     jac_x /= sig[cfg.fitidx]
@@ -556,14 +554,17 @@ def stevevoigterrfunc_w_jac(x, xall0, notfixed, indices, wavelength, flux, sig):
 
 def update_bad_pixels():
     # define bad pixels
-    cond_badpix = (cfg.spectrum.wavelength <= cfg.spectrum.wvmin) | \
-                  (cfg.spectrum.wavelength >= cfg.spectrum.wvmax) | \
-                  (cfg.spectrum.sig <= 0)
-    #(cfg.spectrum.flux / cfg.spectrum.sig < cfg.min_sn)  # bad S/N
+    cond_badpix = (
+        (cfg.spectrum.wavelength <= cfg.spectrum.wvmin)
+        | (cfg.spectrum.wavelength >= cfg.spectrum.wvmax)
+        | (cfg.spectrum.sig <= 0)
+    )
+    # (cfg.spectrum.flux / cfg.spectrum.sig < cfg.min_sn)  # bad S/N
     # spectral gaps
     for gap in cfg.spectral_gaps:
-        cond_gap = (cfg.spectrum.wavelength >=
-                    gap[0] * u.AA) & (cfg.spectrum.wavelength <= gap[1] * u.AA)
+        cond_gap = (cfg.spectrum.wavelength >= gap[0] * u.AA) & (
+            cfg.spectrum.wavelength <= gap[1] * u.AA
+        )
         cond_badpix = cond_badpix | cond_gap
     bad_pixels = np.where(cond_badpix)[0]
     return bad_pixels
@@ -595,21 +596,22 @@ def various_indices(parinfo):
     indices = np.zeros([npar])
 
     ## FIXED parameters ?
-    pfixed = parameterInformationFunction(parinfo, 'fixed', default=0, n=npar)
+    pfixed = parameterInformationFunction(parinfo, "fixed", default=0, n=npar)
 
-    ptied = parameterInformationFunction(parinfo, 'tied', default='', n=npar)
+    ptied = parameterInformationFunction(parinfo, "tied", default="", n=npar)
 
     qanytied = 0
     for i in range(npar):
         ptied[i] = ptied[i].strip()
-        if (ptied[i] != ''): qanytied = 1
+        if ptied[i] != "":
+            qanytied = 1
 
     kk = 0
     for ii in range(len(indices)):
         if pfixed[ii] == 1:
             continue
         else:
-            if ptied[ii] == '':
+            if ptied[ii] == "":
 
                 indices[ii] = kk
 
@@ -622,7 +624,7 @@ def various_indices(parinfo):
     ifree = np.where(np.array(pfixed) == 0)
     nfree = len(ifree)
     if nfree == 0:
-        raise ValueError('no free parameters.')
+        raise ValueError("no free parameters.")
 
     inotfixed = np.where(np.array(pfixed) == 0)
 
@@ -630,55 +632,59 @@ def various_indices(parinfo):
 
     for i in range(npar):
         pfixed[i] = pfixed[i] or (
-            ptied[i] != '')  ## Tied parameters are also effectively fixed
+            ptied[i] != ""
+        )  ## Tied parameters are also effectively fixed
     return (pfixed, ptied, ifree, indices)
 
 
-def parameterInformationFunction(parinfo=None, key='a', default=None, n=0):
-    #if (self.debug): print('Entering parinfo...')
+def parameterInformationFunction(parinfo=None, key="a", default=None, n=0):
+    # if (self.debug): print('Entering parinfo...')
 
     # makes sure n is the length of parinfo:
-    if (n == 0) and (parinfo is not None): n = len(parinfo)
+    if (n == 0) and (parinfo is not None):
+        n = len(parinfo)
 
     # returns nothing if parinfo is empty:
-    if (n == 0):
+    if n == 0:
         values = default
-        return (values)
+        return values
 
     # makes a list of the values of the specified key/item for each parameter
     values = []
     for i in range(n):
-        if ((parinfo is not None) and (key in parinfo[i])):
+        if (parinfo is not None) and (key in parinfo[i]):
             values.append(parinfo[i][key])
         else:
             values.append(default)
 
     # Convert to numeric arrays if possible
     test = default
-    if (type(default) == list): test = default[0]
-    if (type(test) == int):
+    if type(default) == list:
+        test = default[0]
+    if type(test) == int:
         values = np.asarray(values, dtype=np.int)
-    elif (type(test) == float):
+    elif type(test) == float:
         values = np.asarray(values, dtype=np.float)
 
-    return (values)
+    return values
 
 
 # here are the functions needed for calculating fit errors in stevebvpfit:
 
 
-def calc_covar(rr, ipvt=None, tol=1.e-14):
+def calc_covar(rr, ipvt=None, tol=1.0e-14):
 
     if np.rank(rr) != 2:
-        print('ERROR: r must be a two-dimensional matrix')
-        return (-1)
+        print("ERROR: r must be a two-dimensional matrix")
+        return -1
     s = np.shape(rr)
     n = s[0]
     if s[0] != s[1]:
-        print('ERROR: r must be a square matrix')
-        return (-1)
+        print("ERROR: r must be a square matrix")
+        return -1
 
-    if (ipvt is None): ipvt = np.arange(n)
+    if ipvt is None:
+        ipvt = np.arange(n)
     r = rr.copy()
     r.shape = [n, n]
 
@@ -686,12 +692,13 @@ def calc_covar(rr, ipvt=None, tol=1.e-14):
     l = -1
     tolr = tol * abs(r[0, 0])
     for k in range(n):
-        if (abs(r[k, k]) <= tolr): break
-        r[k, k] = 1. / r[k, k]
+        if abs(r[k, k]) <= tolr:
+            break
+        r[k, k] = 1.0 / r[k, k]
         for j in range(k):
             temp = r[k, k] * r[j, k]
-            r[j, k] = 0.
-            r[0:j + 1, k] = r[0:j + 1, k] - temp * r[0:j + 1, j]
+            r[j, k] = 0.0
+            r[0 : j + 1, k] = r[0 : j + 1, k] - temp * r[0 : j + 1, j]
         l = k
 
     ## Form the full upper triangle of the inverse of (r transpose)*r
@@ -700,9 +707,9 @@ def calc_covar(rr, ipvt=None, tol=1.e-14):
         for k in range(l + 1):
             for j in range(k):
                 temp = r[j, k]
-                r[0:j + 1, j] = r[0:j + 1, j] + temp * r[0:j + 1, k]
+                r[0 : j + 1, j] = r[0 : j + 1, j] + temp * r[0 : j + 1, k]
             temp = r[k, k]
-            r[0:k + 1, k] = temp * r[0:k + 1, k]
+            r[0 : k + 1, k] = temp * r[0 : k + 1, k]
 
     ## For the full lower triangle of the covariance matrix
     ## in the strict lower triangle or and in wa
@@ -711,18 +718,21 @@ def calc_covar(rr, ipvt=None, tol=1.e-14):
         jj = ipvt[j]
         sing = j > l
         for i in range(j + 1):
-            if sing: r[i, j] = 0.
+            if sing:
+                r[i, j] = 0.0
             ii = ipvt[i]
-            if ii > jj: r[ii, jj] = r[i, j]
-            if ii < jj: r[jj, ii] = r[i, j]
+            if ii > jj:
+                r[ii, jj] = r[i, j]
+            if ii < jj:
+                r[jj, ii] = r[i, j]
         wa[jj] = r[j, j]
 
     ## Symmetrize the covariance matrix in r
     for j in range(n):
-        r[0:j + 1, j] = r[j, 0:j + 1]
+        r[0 : j + 1, j] = r[j, 0 : j + 1]
         r[j, j] = wa[j]
 
-    return (r)
+    return r
 
 
 def calc_perrors(jac, ifree, numpars=5):
@@ -732,7 +742,7 @@ def calc_perrors(jac, ifree, numpars=5):
     except np.linalg.LinAlgError:
         # idk should I do this?
         rr = np.linalg.pinv(jac.T @ jac)
-        print('using pseudo inverse for Jacobian')
+        print("using pseudo inverse for Jacobian")
     covar = np.zeros([numpars, numpars], np.float)
 
     for i in range(n):
@@ -741,43 +751,42 @@ def calc_perrors(jac, ifree, numpars=5):
 
     d = np.sqrt(np.diagonal(covar))
 
-    return (d)
+    return d
 
 
 # The main event:
 def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
 
-    if (linepars is None):
-        raise ValueError('Must pass parameters in linepars.')
+    if linepars is None:
+        raise ValueError("Must pass parameters in linepars.")
         return
 
     # Only feed to the fitter the parameters that go into the model
     partofit = linepars[:5]
 
-    parinfo = prepparinfo(partofit, flags)
+    parinfo = prepparinfo(linepars, flags)
 
     npar = len(parinfo)
 
     ## Be sure that PARINFO is of the right type
-    if (parinfo is not None):
-        if (type(parinfo) != list):
-            raise ValueError('PARINFO must be a list of dictionaries.')
+    if parinfo is not None:
+        if type(parinfo) != list:
+            raise ValueError("PARINFO must be a list of dictionaries.")
             return
 
         else:
-            if (type(parinfo[0]) != dict):
-                raise ValueError('PARINFO must be a list of dictionaries.')
+            if type(parinfo[0]) != dict:
+                raise ValueError("PARINFO must be a list of dictionaries.")
                 return
 
     ## If the parameters were not specified at the command line, then
     ## extract them from PARINFO
 
-    if (xall is None):
+    if xall is None:
 
-        xall = parameterInformationFunction(parinfo, 'value')
-        if (xall is None):
-            raise ValueError(
-                'either xall or PARINFO(*)["value"] must be supplied.')
+        xall = parameterInformationFunction(parinfo, "value")
+        if xall is None:
+            raise ValueError('either xall or PARINFO(*)["value"] must be supplied.')
     xall = np.ravel(np.array(xall).T)
 
     # function that deals with tied and fixed parameters and creates
@@ -790,33 +799,31 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
     indices = indices.astype(np.int)
     ifree = np.squeeze(ifree)
     ## Compose only VARYING parameters
-    x = np.squeeze(xall)[np.squeeze(
-        pfixed == 0)]  ## x is the set of free parameters
+    x = np.squeeze(xall)[np.squeeze(pfixed == 0)]  ## x is the set of free parameters
 
     ## LIMITED parameters ?
-    limited = parameterInformationFunction(parinfo,
-                                           'limited',
-                                           default=[0, 0],
-                                           n=npar)
-    limits = parameterInformationFunction(parinfo,
-                                          'limits',
-                                          default=[0., 0.],
-                                          n=npar)
+    limited = parameterInformationFunction(parinfo, "limited", default=[0, 0], n=npar)
+    limits = parameterInformationFunction(parinfo, "limits", default=[0.0, 0.0], n=npar)
 
     if (limited is not None) and (limits is not None):
 
         ## Error checking on limits in parinfo
-        wh = np.nonzero((limited[:, 0] & (xall < limits[:, 0]))
-                        | (limited[:, 1] & (xall > limits[:, 1])))
+        wh = np.nonzero(
+            (limited[:, 0] & (xall < limits[:, 0]))
+            | (limited[:, 1] & (xall > limits[:, 1]))
+        )
 
-        if (len(wh[0]) > 0):
-            raise ValueError('parameters are not within PARINFO limits')
+        if len(wh[0]) > 0:
+            raise ValueError("parameters are not within PARINFO limits")
             return
 
-        wh = np.nonzero((limited[:, 0] & limited[:, 1])
-                        & (limits[:, 0] >= limits[:, 1]) & (pfixed == 0))
-        if (len(wh[0]) > 0):
-            raise ValueError('PARINFO parameter limits are not consistent')
+        wh = np.nonzero(
+            (limited[:, 0] & limited[:, 1])
+            & (limits[:, 0] >= limits[:, 1])
+            & (pfixed == 0)
+        )
+        if len(wh[0]) > 0:
+            raise ValueError("PARINFO parameter limits are not consistent")
             return
         freeanduntied = np.where(np.squeeze(pfixed == 0))[0]
         ## Transfer structure values to local variables
@@ -840,47 +847,48 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
 
     partofit = unfoldpars(partofit)
 
-    modelvars = {'l': wave, 'y': flux, 'err': sig}
+    modelvars = {"l": wave, "y": flux, "err": sig}
 
-    bnds = (np.squeeze(np.where(qllim == 1, llim, -np.inf)),
-            np.squeeze(np.where(qulim == 1, ulim, np.inf)))
+    bnds = (
+        np.squeeze(np.where(qllim == 1, llim, -np.inf)),
+        np.squeeze(np.where(qulim == 1, ulim, np.inf)),
+    )
 
-    arg = [
-        xall, ifree, indices, modelvars['l'], modelvars['y'], modelvars['err']
-    ]
+    arg = [xall, ifree, indices, modelvars["l"], modelvars["y"], modelvars["err"]]
 
     # here is where fitting happens:
-    cache = {'x':np.nan, 'resid':np.nan, 'jac':np.nan}
+    cache = {"x": np.nan, "resid": np.nan, "jac": np.nan}
 
     def cached_resid(x, cache):
-        if np.all(x == cache['x']):
-            return cache['resid']
-        cache['x'] = x.copy()
+        if np.all(x == cache["x"]):
+            return cache["resid"]
+        cache["x"] = x.copy()
         resid, jac = stevevoigterrfunc_w_jac(x, *arg)
-        cache['resid'] = resid
-        cache['jac'] = jac.T
+        cache["resid"] = resid
+        cache["jac"] = jac.T
         return resid
 
     def cached_jac(x, cache):
-        if np.all(x == cache['x']):
-            return cache['jac']
-        cache['x'] = x.copy()
+        if np.all(x == cache["x"]):
+            return cache["jac"]
+        cache["x"] = x.copy()
         resid, jac = stevevoigterrfunc_w_jac(x, *arg)
-        cache['resid'] = resid
-        cache['jac'] = jac.T
+        cache["resid"] = resid
+        cache["jac"] = jac.T
         return jac.T
 
-
-    m = least_squares(cached_resid,
-                      x,
-                      bounds=bnds,
-                      args=(cache,),
-                      kwargs={},
-                      verbose=True,
-                      jac=cached_jac)
+    m = least_squares(
+        cached_resid,
+        x,
+        bounds=bnds,
+        args=(cache,),
+        kwargs={},
+        verbose=True,
+        jac=cached_jac,
+    )
 
     if m.status < 0:
-        print('Fitting error:', m.message)
+        print("Fitting error:", m.message)
         done = True
     elif m.status == 0:
         done = False
@@ -889,7 +897,7 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
 
     xall_fitted = xall.copy()
 
-    xall_fitted[ifree] = m['x'][indices]
+    xall_fitted[ifree] = m["x"][indices]
 
     fitpars = foldpars(xall_fitted)
 
@@ -899,7 +907,7 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
     badvarmask = np.all(np.isclose(m.jac, 1e-10), axis=0)
     if np.any(badvarmask):
         try:
-            bad_var_ind, = np.where(badvarmask)
+            (bad_var_ind,) = np.where(badvarmask)
             # Replacing bad columns with value near 0.
             m.jac[:, bad_var_ind] = 1e-5
             # Giving rest wavelength and redshift of bad lines. Also really janky in and
@@ -910,8 +918,11 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
             for comp in bad_comp_inds:
                 bad_wav = fitpars[0][comp]
                 bad_red = fitpars[3][comp]
-                print('Bad component of {0:.5f} at {1:.5f}.'.format(
-                    np.float(bad_wav), np.float(bad_red)))
+                print(
+                    "Bad component of {0:.5f} at {1:.5f}.".format(
+                        np.float(bad_wav), np.float(bad_red)
+                    )
+                )
         except IndexError:
             pass
 
@@ -929,37 +940,40 @@ def stevebvpfit(wave, flux, sig, flags, linepars=None, xall=None):
     fitpars.append(vlim2)
 
     # prints results in terminal/notebook/whatever thing you have python running from
-    print('\nFit results: \n')
+    print("\nFit results: \n")
     for i in range(len(fitpars[0])):
         print(
-            jbg.tabdelimrow([
-                round(fitpars[0][i], 2),
-                jbg.decimalplaces(fitpars[3][i], 5),
-                jbg.roundto(fitpars[1][i], 5),
-                jbg.roundto(fitpars[2][i], 5),
-                jbg.roundto(fitpars[4][i], 5)
-            ])[:-2])
+            jbg.tabdelimrow(
+                [
+                    round(fitpars[0][i], 2),
+                    jbg.decimalplaces(fitpars[3][i], 5),
+                    jbg.roundto(fitpars[1][i], 5),
+                    jbg.roundto(fitpars[2][i], 5),
+                    jbg.roundto(fitpars[4][i], 5),
+                ]
+            )[:-2]
+        )
         print(
-            jbg.tabdelimrow([
-                ' ', ' ', ' ',
-                round(fitperr[1][i], 3),
-                round(fitperr[2][i], 3),
-                round(fitperr[4][i], 3)
-            ]))
-    print('\nReduced chi-squared: {0:f}'.format(rchi2))
+            jbg.tabdelimrow(
+                [
+                    " ",
+                    " ",
+                    " ",
+                    round(fitperr[1][i], 3),
+                    round(fitperr[2][i], 3),
+                    round(fitperr[4][i], 3),
+                ]
+            )
+        )
+    print("\nReduced chi-squared: {0:f}".format(rchi2))
     return fitpars, fitperr, rchi2, done
 
 
 # ... the other main event:
-def fit_to_convergence(wave,
-                       flux,
-                       sig,
-                       flags,
-                       linepars,
-                       xall,
-                       maxiter=50,
-                       itertol=0.0001):
-    '''
+def fit_to_convergence(
+    wave, flux, sig, flags, linepars, xall, maxiter=50, itertol=0.0001
+):
+    """
 
     Parameters
     ----------
@@ -981,7 +995,7 @@ def fit_to_convergence(wave,
     Returns
     -------
 
-    '''
+    """
     fitpars = linepars
     oldfitpars = np.zeros([7, len(fitpars[0])]) - 99
     ctr = 0
@@ -991,50 +1005,42 @@ def fit_to_convergence(wave,
         maxdiff = np.max(np.abs(fitpars - oldfitpars))
         if ctr > 0:
             xall = None
-            #forces initial values to be taken from fitpars
+            # forces initial values to be taken from fitpars
         ctr += 1
 
         try:
             # so the fitpars from the last iteration doesn't get erased:
             oldfitpars = fitpars
-            fitpars, fiterrors, rchi2, done = stevebvpfit(wave,
-                                                            flux,
-                                                            sig,
-                                                            flags,
-                                                            linepars=fitpars,
-                                                            xall=xall)
+            fitpars, fiterrors, rchi2, done = stevebvpfit(
+                wave, flux, sig, flags, linepars=fitpars, xall=xall
+            )
             fitpars = np.array(fitpars)
-            print('Iteration', ctr, '-')
+            print("Iteration", ctr, "-")
 
         except:
-            print('Fitting error!')
+            print("Fitting error!")
             print("Unexpected error:", sys.exc_info()[0])
             okay = 0
             raise
 
     if okay != 0:
-        print('Fit converged after', ctr, 'outer iterations.')
+        print("Fit converged after", ctr, "outer iterations.")
         return fitpars, fiterrors, rchi2
     else:
         return linepars, fiterrors, rchi2
 
 
 def writerchi2(rchi2, outfilename):
-    '''
+    """
     Writes reduced input group's chi-squared to file.
-    '''
-    rchi2file = open(outfilename, 'wt')
+    """
+    rchi2file = open(outfilename, "wt")
     rchi2file.write(str(rchi2))
     rchi2file.close()
 
 
-def writelinepars(fitpars,
-                  fiterrors,
-                  parinfo,
-                  specfile,
-                  outfilename,
-                  linecmts=None):
-    '''
+def writelinepars(fitpars, fiterrors, parinfo, specfile, outfilename, linecmts=None):
+    """
     Write fit parameters out to file.
 
     Parameters
@@ -1052,23 +1058,24 @@ def writelinepars(fitpars,
     linecmts : list of lists, optional
         Reliability flags and comments, e.g., from igmguesses
 
-    '''
+    """
     import os
+
     ### Set outputs and open files
     bigfiletowrite = cfg.largeVPparfile
     filetowrite = outfilename
     if os.path.isfile(filetowrite):
-        VPparfile = open(filetowrite, 'wb')
-        bigparfile = open(bigfiletowrite, 'ab')  # Append to the running list
+        VPparfile = open(filetowrite, "wb")
+        bigparfile = open(bigfiletowrite, "ab")  # Append to the running list
     else:
-        VPparfile = open(filetowrite, 'wb')
-        bigparfile = open(bigfiletowrite, 'wb')
+        VPparfile = open(filetowrite, "wb")
+        bigparfile = open(bigfiletowrite, "wb")
 
     ### Prep header of line parameter file
     if linecmts is not None:
-        header = b'specfile|restwave|zsys|col|sigcol|bval|sigbval|vel|sigvel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|pix1|pix2|z_comp|trans|rely|comment \n'
+        header = b"specfile|restwave|zsys|col|sigcol|bval|sigbval|vel|sigvel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|pix1|pix2|z_comp|trans|rely|comment \n"
     else:
-        header = b'specfile|restwave|zsys|col|sigcol|bval|sigbval|vel|sigvel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|pix1|pix2|z_comp|trans \n'
+        header = b"specfile|restwave|zsys|col|sigcol|bval|sigbval|vel|sigvel|nflag|bflag|vflag|vlim1|vlim2|wobs1|wobs2|pix1|pix2|z_comp|trans \n"
     VPparfile.write(header)
     bigparfile.write(header)
 
@@ -1085,36 +1092,62 @@ def writelinepars(fitpars,
         trans = atomicdata.lam2ion(fitpars[0][i])
         z_comp = ltu.z_from_dv(fitpars[4][i] * u.km / u.s, zline)
         if linecmts is not None:
-            towrite = jbg.pipedelimrow([
-                specfile, restwave,
-                round(zline, 5),
-                round(fitpars[1][i], 3),
-                round(fiterrors[1][i], 3),
-                round(fitpars[2][i], 3),
-                round(fiterrors[2][i], 3),
-                round(fitpars[4][i], 3),
-                round(fiterrors[4][i], 3), parinfo[1][i], parinfo[2][i],
-                parinfo[4][i], vlim1, vlim2, wobs1, wobs2, pix1, pix2,
-                round(z_comp, 5), trans, linecmts[0][i], linecmts[1][i]
-            ])
+            towrite = jbg.pipedelimrow(
+                [
+                    specfile,
+                    restwave,
+                    round(zline, 5),
+                    round(fitpars[1][i], 3),
+                    round(fiterrors[1][i], 3),
+                    round(fitpars[2][i], 3),
+                    round(fiterrors[2][i], 3),
+                    round(fitpars[4][i], 3),
+                    round(fiterrors[4][i], 3),
+                    parinfo[1][i],
+                    parinfo[2][i],
+                    parinfo[4][i],
+                    vlim1,
+                    vlim2,
+                    wobs1,
+                    wobs2,
+                    pix1,
+                    pix2,
+                    round(z_comp, 5),
+                    trans,
+                    linecmts[0][i],
+                    linecmts[1][i],
+                ]
+            )
         else:
-            towrite = jbg.pipedelimrow([
-                specfile, restwave,
-                round(zline, 5),
-                round(fitpars[1][i], 3),
-                round(fiterrors[1][i], 3),
-                round(fitpars[2][i], 3),
-                round(fiterrors[2][i], 3),
-                round(fitpars[4][i], 3),
-                round(fiterrors[4][i], 3), parinfo[1][i], parinfo[2][i],
-                parinfo[4][i], vlim1, vlim2, wobs1, wobs2, pix1, pix2,
-                round(z_comp, 5), trans
-            ])
+            towrite = jbg.pipedelimrow(
+                [
+                    specfile,
+                    restwave,
+                    round(zline, 5),
+                    round(fitpars[1][i], 3),
+                    round(fiterrors[1][i], 3),
+                    round(fitpars[2][i], 3),
+                    round(fiterrors[2][i], 3),
+                    round(fitpars[4][i], 3),
+                    round(fiterrors[4][i], 3),
+                    parinfo[1][i],
+                    parinfo[2][i],
+                    parinfo[4][i],
+                    vlim1,
+                    vlim2,
+                    wobs1,
+                    wobs2,
+                    pix1,
+                    pix2,
+                    round(z_comp, 5),
+                    trans,
+                ]
+            )
         VPparfile.write(towrite.encode())
         bigparfile.write(towrite.encode())
     VPparfile.close()
     bigparfile.close()
-    print('Line parameters written to:')
+    print("Line parameters written to:")
     print(filetowrite)
 
 
@@ -1123,11 +1156,14 @@ def writeVPmodel(outfile, wave, fitpars, normflux, normsig):
     from astropy.table import Table
 
     model = voigtfunc(wave, fitpars)
-    modeltab = Table([wave, model, normflux, normsig],
-                     names=['wavelength', 'model', 'normflux', 'normsig'])
+    modeltab = Table(
+        [wave, model, normflux, normsig],
+        names=["wavelength", "model", "normflux", "normsig"],
+    )
 
     dummycont = np.ones(len(wave))
 
-    spec = XSpectrum1D.from_tuple((modeltab['wavelength'], modeltab['model'],
-                                   modeltab['normsig'], dummycont))
+    spec = XSpectrum1D.from_tuple(
+        (modeltab["wavelength"], modeltab["model"], modeltab["normsig"], dummycont)
+    )
     spec.write_to_fits(outfile)
