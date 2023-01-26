@@ -943,7 +943,14 @@ def concatenate_all(spectrum, filepath='.', outparfile='.VP'):
     # makes compiledVPoutputs.dat
     jbu.concatenate_line_tables("all_VP.txt")
 
-    reload(cfg)  # Clear out the LSFs from the last fit
+    #reload(cfg)  # Clear out the LSFs from the last fit
+    cfg.lsfs = []
+    cfg.fgs = []
+    cfg.wavegroups = []
+    cfg.wgidxs = []
+    cfg.uqwgidxs = []
+    cfg.fitidx = []
+
     cfg.spectrum = spectrum
 
     # makes pdf from compiledVPoutputs.dat
