@@ -44,8 +44,8 @@ else:  # this is for the casual user
     slits=['NA','NA']  # Required when using instr = 'COS'
     lps=['2','2']  # Lifetime positions; required when using instr = 'COS'
     spectral_gaps = [[0,1162.5], [1198,1201.5], [1213.3, 1217.93], [1299.3,1321.6],[1596,1612.8],[1782,2000]]
-    pixel_scales = ['N/A','N/A']  # Required when using instr = 'Gaussian' (in Angstroms)
-    fwhms = ['N/A','N/A']  # Required when using instr = 'Gaussian' (in Angstroms)
+    pixel_scales = ['N/A','N/A']  # Required when using instr = 'Gaussian' (in Angstroms; float)
+    fwhms = ['N/A','N/A']  # Required when using instr = 'Gaussian' (in Angstroms; float)
 
 # fundamental constants
 echarge = 4.803204505713468e-10
@@ -68,7 +68,7 @@ contoutfile = outputdir + 'continua.dat'
 largeVPparfile = outputdir + '_VP_log.dat'
 defaultcol = 13.1
 defaultb = 20.0
-defaultvlim = 500.
+defaultvlim = 1000.
 lowblim = 6.
 upperblim = 85.
 upperblim_HI = 210.
