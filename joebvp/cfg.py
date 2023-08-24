@@ -68,8 +68,8 @@ contoutfile = outputdir + 'continua.dat'
 largeVPparfile = outputdir + '_VP_log.dat'
 defaultcol = 13.1
 defaultb = 20.0
-defaultvlim = 1000.
-lowblim = 4.
+defaultvlim = 500.
+lowblim = 6.
 upperblim = 85.
 upperblim_HI = 210.
 
